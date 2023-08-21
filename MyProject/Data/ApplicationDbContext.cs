@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 
 namespace MyProject.Data;
@@ -10,5 +9,6 @@ public class ApplicationDbContext : DbContext
         
     }
 
+    public DbSet<Account> Accounts { get; set; }
 }
  
