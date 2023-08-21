@@ -5,11 +5,13 @@ using System.Threading.Tasks;
 
 namespace MyProject.Models
 {
-    public class UserInfoModel
+    public class AccountUpdateModel
     {
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Email { get; set; }
         public string Phone { get; set; }
+        public DateTime? ModifiedDate { get; set; }
+        
     }
 }

@@ -1,12 +1,12 @@
-@model UserInfoModel
+@model AccountInfoModel
 @{
-    ViewData["Title"] = "User Information";
+    ViewData["Title"] = "Account Information";
 }
 
 <div class="container p-3 text-center">
     <div class="row pt-4">
         <div class="col-12">
-            <h2 class="text-primary">User Information</h2>
+            <h2 class="text-primary">Account Information</h2>
         </div>
     </div>
     <div class="row pt-4">
@@ -29,6 +29,12 @@
             </div>
             <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
                 Logout
+            </a>
+            <a asp-controller="Authentication" asp-action="Update" class="btn btn-secondary">
+                Account Update
+            </a>
+             <a asp-controller="Authentication" asp-action="UpdatePassword" class="btn btn-secondary">
+                Password Reset
             </a>
         </div>
     </div>
