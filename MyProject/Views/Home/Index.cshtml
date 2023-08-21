@@ -1,9 +1,40 @@
-﻿@{
+﻿@model IEnumerable<Account>
+@{
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<style>
+    .flex-container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
 
+    .flex-item {
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="flex-container">
+                <div class="flex-item">
+                    <h1 class="display-4">BulkyBook</h1>
+                </div>
+                <div class="flex-item">
+                    <a asp-controller="Authentication" asp-action="Register" class="btn btn-primary btn-lg">
+                        <i class="bi bi-plus-circle"></i> &nbsp; Register 
+                    </a>
+                </div>
+                <div class="flex-item">
+                    <a asp-controller="Authentication" asp-action="Login" class="btn btn-secondary btn-lg">
+                        <i class="bi bi-door-open"></i> &nbsp; Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
