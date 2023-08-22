@@ -38,7 +38,7 @@ namespace MyProject.Controllers
         [HttpGet]
         public IActionResult DeleteConfirmation()
         {
-            return View(); // Silme işlemini onaylayan bir sayfa oluşturmanız gerekebilir.
+            return View(); 
         }
 
         [HttpPost]
