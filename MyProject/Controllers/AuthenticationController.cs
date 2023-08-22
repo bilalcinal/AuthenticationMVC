@@ -21,13 +21,26 @@ namespace MyProject.Controllers
         {
             return View();
         }
-
+        
+        public IActionResult Login()
+        {
+            return View();
+        }
         public IActionResult Register(int Id)
         {
             ViewData["Id"] = Id;
             return View();
         }
-        
+         public IActionResult UpdatePassword()
+        {
+            return View();
+        }
+        [HttpGet]
+        public IActionResult DeleteConfirmation()
+        {
+            return View(); // Silme işlemini onaylayan bir sayfa oluşturmanız gerekebilir.
+        }
+
         [HttpPost]
         public async Task<IActionResult> Register(AccountModel accountModel)
         {
@@ -69,11 +82,6 @@ namespace MyProject.Controllers
             }
 
             return View(accountModel);
-        }
-
-        public IActionResult Login()
-        {
-            return View();
         }
 
         [HttpPost]
@@ -147,14 +155,9 @@ namespace MyProject.Controllers
                     return RedirectToAction("AccountInfo", "Authentication");
                 }
             }
-
             return View(accountUpdateModel);
         }
-        public IActionResult UpdatePassword()
-        {
-            return View();
-        }
-
+       
         [HttpPost]
         public async Task<IActionResult> UpdatePassword(UpdatePasswordModel updatePasswordModel)
         {
@@ -181,7 +184,6 @@ namespace MyProject.Controllers
                     return RedirectToAction("AccountInfo", "Authentication");
                 }
             }
-
             return View(updatePasswordModel);
         }
 
@@ -203,10 +205,26 @@ namespace MyProject.Controllers
 
                 return View(AccountInfoModel);
             }
-
             return RedirectToAction("Index", "Home");
         }
+        [HttpPost]
+        public async Task<IActionResult> Delete()
+        {
+            var accountEmail = User.Identity.Name;
+            var account = await _applicationDbContext.Accounts.Where(a => a.Email == accountEmail).FirstOrDefaultAsync();
 
+            if (account != null)
+            {
+                _applicationDbContext.Accounts.Remove(account);
+                await _applicationDbContext.SaveChangesAsync();
+
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                TempData["SuccessMessage"] = "Hesap başarıyla silindi.";
+                return RedirectToAction("Index", "Home");
+            }
+
+            return RedirectToAction("Index", "Home"); 
+        }
     }
 }
-

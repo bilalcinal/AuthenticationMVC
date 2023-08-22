@@ -27,13 +27,16 @@
                 <label>Phone:</label>
                 <input type="text" class="form-control" value="@Model.Phone" readonly />
             </div>
+            <form asp-controller="Authentication" asp-action="Delete" method="post" onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
+                <button type="submit" class="btn btn-danger" id="deleteButton">Delete Account</button>
+            </form>
             <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
                 Logout
             </a>
             <a asp-controller="Authentication" asp-action="Update" class="btn btn-secondary">
                 Account Update
             </a>
-             <a asp-controller="Authentication" asp-action="UpdatePassword" class="btn btn-secondary">
+            <a asp-controller="Authentication" asp-action="UpdatePassword" class="btn btn-secondary">
                 Password Reset
             </a>
         </div>
