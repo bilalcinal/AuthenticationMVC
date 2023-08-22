@@ -11,25 +11,24 @@
         <div asp-validation-summary="All"></div>
         <div class="mb-3">
             <label asp-for="FirstName"></label>
-            <input asp-for="FirstName" class="form-control" />
+            <input asp-for="FirstName" class="form-control" pattern="[A-Za-z]+" title="Please enter letters only" required />
             <span asp-validation-for="FirstName" class="text-danger"></span>
         </div>
-         <div class="mb-3">
+        <div class="mb-3">
             <label asp-for="LastName"></label>
-            <input asp-for="LastName" class="form-control" />
+            <input asp-for="LastName" class="form-control" pattern="[A-Za-z]+" title="Please enter letters only" required />
             <span asp-validation-for="LastName" class="text-danger"></span>
         </div>
-         <div class="mb-3">
+        <div class="mb-3">
             <label asp-for="Email"></label>
-            <input asp-for="Email" class="form-control" />
+            <input asp-for="Email" class="form-control" required />
             <span asp-validation-for="Email" class="text-danger"></span>
         </div>
-         <div class="mb-3">
+        <div class="mb-3">
             <label asp-for="Phone"></label>
-            <input asp-for="Phone" class="form-control" />
+            <input asp-for="Phone" class="form-control" pattern="[0-9]+" title="Please enter numbers only" required />
             <span asp-validation-for="Phone" class="text-danger"></span>
         </div>
-
         <button type="submit" class="btn btn-primary" style="width:150px">Update</button>
         <a asp-controller="Authentication" asp-action="AccountInfo" class="btn btn-secondary" style="width:150px">
             Cancel
@@ -39,7 +38,5 @@
 
 @section Scripts
 {
-    @{
-      <partial name="_ValidationScriptsPartial"/>
-     }
+    <partial name="_ValidationScriptsPartial"/>
 }
