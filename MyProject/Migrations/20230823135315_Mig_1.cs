@@ -22,8 +22,6 @@ namespace MyProject.Migrations
                     PasswordHash = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
                     PasswordSalt = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
                     SehirId = table.Column<int>(type: "int", nullable: false),
-                    IlceId = table.Column<int>(type: "int", nullable: false),
-                    UlkeId = table.Column<int>(type: "int", nullable: false),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ModifiedDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },

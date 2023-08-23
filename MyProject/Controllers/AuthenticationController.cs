@@ -32,20 +32,9 @@ namespace MyProject.Controllers
         [HttpGet]
         public async Task<IActionResult> Register()
         {
-            var countries = await _applicationDbContext.Ulkeler.ToListAsync();
-            var cities = await _applicationDbContext.Sehirler.ToListAsync();
-            var districts = await _applicationDbContext.Ilceler.ToListAsync();
-            var neighborhoods = await _applicationDbContext.SemtMah.ToListAsync();
-
-            var accountModel = new AccountPlaceOfResidence
-            {
-                Countries = countries,
-                Cities = cities,
-                Districts = districts,
-                Neighborhoods = neighborhoods
-            };
-
-            return View(accountModel);
+          
+            ViewBag.Cities = await _applicationDbContext.Sehirlers.ToListAsync();
+            return View();
          }
 
          public IActionResult UpdatePassword()
@@ -98,9 +87,7 @@ namespace MyProject.Controllers
                     LastName = accountModel.LastName,
                     Email = accountModel.Email,
                     Phone = accountModel.Phone,
-                    UlkeId = accountModel.UlkeId,
                     SehirId = accountModel.SehirId,
-                    IlceId = accountModel.IlceId,
                     PasswordHash = passwordHash,
                     PasswordSalt = passwordSalt,
                     CreatedDate = DateTime.UtcNow
@@ -110,6 +97,7 @@ namespace MyProject.Controllers
                 TempData["SuccessMessage"] = "Kayıt işlemi başarıyla tamamlandı.";
                 return RedirectToAction("Login", "Authentication");
             }
+            ViewBag.Cities = await _applicationDbContext.Sehirlers.ToListAsync();
 
             return View(accountModel);
         }
@@ -141,19 +129,23 @@ namespace MyProject.Controllers
 
             return RedirectToAction("AccountInfo", "Authentication");
         }
+        [HttpGet]
         public async Task<IActionResult> Update()
         {
             var accountEmail = User.Identity.Name;
             var account = await _applicationDbContext.Accounts.Where(a => a.Email == accountEmail).FirstOrDefaultAsync();
-
+            
             if (account != null)
             {
+                var cities = await _applicationDbContext.Sehirlers.ToListAsync();
                 var accountUpdateModel = new AccountUpdateModel
                 {
                     FirstName = account.FirstName,
                     LastName = account.LastName,
+                    SehirId = account.SehirId,
                     Phone = account.Phone
                 };
+                ViewBag.Cities = cities;
 
                 return View(accountUpdateModel);
             }
@@ -173,6 +165,7 @@ namespace MyProject.Controllers
                     account.FirstName = accountUpdateModel.FirstName;
                     account.LastName = accountUpdateModel.LastName;
                     account.Phone = accountUpdateModel.Phone;
+                    account.SehirId = accountUpdateModel.SehirId;
                     account.ModifiedDate = DateTime.UtcNow;
 
                     _applicationDbContext.Accounts.Update(account);
@@ -182,6 +175,9 @@ namespace MyProject.Controllers
                     return RedirectToAction("AccountInfo", "Authentication");
                 }
             }
+
+            var cities = await _applicationDbContext.Sehirlers.ToListAsync(); 
+            ViewBag.Cities = cities; 
             return View(accountUpdateModel);
         }
        

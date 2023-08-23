@@ -12,8 +12,6 @@ namespace MyProject.Data
         public byte[] PasswordHash { get; set; }
         public byte[] PasswordSalt { get; set; }
         public int SehirId { get; set; }
-        public int IlceId { get; set; }
-        public int UlkeId { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? ModifiedDate { get; set; }
     }
