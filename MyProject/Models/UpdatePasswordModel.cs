@@ -9,7 +9,7 @@ namespace MyProject.Models
     public class UpdatePasswordModel
     {
         public string OldPassword { get; set; }
-        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{1,20}$", ErrorMessage = "Şifre en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir.")]
+        [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{1,20}$", ErrorMessage = "Şifre en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir.Şifre 20 karakterden uzun olmamalıdır.")]
         public string NewPassword { get; set; }
         public string ConfirmNewPassword { get; set; }
     }

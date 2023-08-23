@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MyProject.Data;
 using MyProject.Models;
@@ -9,8 +10,6 @@ using MyProject.Utilities.Security.Hashing;
 
 namespace MyProject.Controllers
 {
-    //mail regexi
-    //telefon numarası 5 ile başlamalı
     //şehir ve ilçeler
     public class AuthenticationController : Controller
     {
@@ -30,11 +29,25 @@ namespace MyProject.Controllers
         {
             return View();
         }
-        public IActionResult Register(int Id)
+        [HttpGet]
+        public async Task<IActionResult> Register()
         {
-            ViewData["Id"] = Id;
-            return View();
-        }
+            var countries = await _applicationDbContext.Ulkeler.ToListAsync();
+            var cities = await _applicationDbContext.Sehirler.ToListAsync();
+            var districts = await _applicationDbContext.Ilceler.ToListAsync();
+            var neighborhoods = await _applicationDbContext.SemtMah.ToListAsync();
+
+            var accountModel = new AccountPlaceOfResidence
+            {
+                Countries = countries,
+                Cities = cities,
+                Districts = districts,
+                Neighborhoods = neighborhoods
+            };
+
+            return View(accountModel);
+         }
+
          public IActionResult UpdatePassword()
         {
             return View();
@@ -44,12 +57,12 @@ namespace MyProject.Controllers
         {
             return View(); 
         }
-
         [HttpPost]
         public async Task<IActionResult> Register(AccountModel accountModel)
         {
-             var existingAccount = await _applicationDbContext.Accounts
-            .Where(a => a.Email == accountModel.Email || a.Phone == accountModel.Phone).FirstOrDefaultAsync();
+            var existingAccount = await _applicationDbContext.Accounts
+                .Where(a => a.Email == accountModel.Email || a.Phone == accountModel.Phone)
+                .FirstOrDefaultAsync();
 
             if (existingAccount != null)
             {
@@ -66,28 +79,31 @@ namespace MyProject.Controllers
                     ModelState.AddModelError("Phone", "Bu telefon numarası zaten kullanılıyor.");
                 }
 
-                return View(accountModel);
             }
-            if(accountModel.Password != accountModel.PasswordAgain)
-                {
-                    ModelState.AddModelError("Password", "Password eşleşmiyor lütfen bir daha deneyiniz.");
-                }
+
+            if (accountModel.Password != accountModel.PasswordAgain)
+            {
+                ModelState.AddModelError("Password", "Password eşleşmiyor lütfen bir daha deneyiniz.");
+            }
 
             if (ModelState.IsValid)
             {
-               byte[] passwordHash, passwordSalt;
+                byte[] passwordHash, passwordSalt;
 
                 HashingHelper.CreatePasswordHash(accountModel.Password, out passwordHash, out passwordSalt);
 
                 _applicationDbContext.Accounts.Add(new Account
                 {
-                FirstName = accountModel.FirstName,
-                LastName = accountModel.LastName,
-                Email = accountModel.Email,
-                Phone = accountModel.Phone,
-                PasswordHash = passwordHash, 
-                PasswordSalt = passwordSalt,
-                CreatedDate = DateTime.UtcNow  
+                    FirstName = accountModel.FirstName,
+                    LastName = accountModel.LastName,
+                    Email = accountModel.Email,
+                    Phone = accountModel.Phone,
+                    UlkeId = accountModel.UlkeId,
+                    SehirId = accountModel.SehirId,
+                    IlceId = accountModel.IlceId,
+                    PasswordHash = passwordHash,
+                    PasswordSalt = passwordSalt,
+                    CreatedDate = DateTime.UtcNow
                 });
 
                 await _applicationDbContext.SaveChangesAsync();
