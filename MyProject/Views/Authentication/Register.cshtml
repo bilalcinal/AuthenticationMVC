@@ -34,6 +34,11 @@
                 <input asp-for="Password" class="form-control" type="password" />
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
+            <div class="mb-3">
+                <label asp-for="PasswordAgain"></label>
+                <input asp-for="PasswordAgain" class="form-control" type="password" />
+                <span asp-validation-for="PasswordAgain" class="text-danger"></span>
+            </div>
             <button type="submit" class="btn btn-primary btn-block btn-lg">Register</button>
             <a asp-controller="Authentication" asp-action="Login" class="btn btn-secondary btn-block btn-lg">
                 İptal et

@@ -5,9 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyProject.Data;
 using MyProject.Models;
+using MyProject.Utilities.Security.Hashing;
 
 namespace MyProject.Controllers
 {
+    //mail regexi
+    //telefon numarası 5 ile başlamalı
+    //şehir ve ilçeler
     public class AuthenticationController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
@@ -64,16 +68,26 @@ namespace MyProject.Controllers
 
                 return View(accountModel);
             }
+            if(accountModel.Password != accountModel.PasswordAgain)
+                {
+                    ModelState.AddModelError("Password", "Password eşleşmiyor lütfen bir daha deneyiniz.");
+                }
 
             if (ModelState.IsValid)
             {
+               byte[] passwordHash, passwordSalt;
+
+                HashingHelper.CreatePasswordHash(accountModel.Password, out passwordHash, out passwordSalt);
+
                 _applicationDbContext.Accounts.Add(new Account
                 {
-                    FirstName = accountModel.FirstName,
-                    LastName = accountModel.LastName,
-                    Email = accountModel.Email,
-                    Phone = accountModel.Phone,
-                    Password = accountModel.Password
+                FirstName = accountModel.FirstName,
+                LastName = accountModel.LastName,
+                Email = accountModel.Email,
+                Phone = accountModel.Phone,
+                PasswordHash = passwordHash, 
+                PasswordSalt = passwordSalt,
+                CreatedDate = DateTime.UtcNow  
                 });
 
                 await _applicationDbContext.SaveChangesAsync();
@@ -87,11 +101,11 @@ namespace MyProject.Controllers
         [HttpPost]
         public async Task<IActionResult> Login(LoginModel loginModel)
         {
-            var account = await _applicationDbContext.Accounts.Where(a => a.Email == loginModel.Email && a.Password == loginModel.Password).FirstOrDefaultAsync();
+            var account = await _applicationDbContext.Accounts.FirstOrDefaultAsync(a => a.Email == loginModel.Email);
 
-            if (account == null)
+            if (account == null || !HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
             {
-                ModelState.AddModelError(" ", "Geçersiz e-posta adresi veya şifre.");
+                ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
                 return View(loginModel);
             }
 
@@ -99,7 +113,6 @@ namespace MyProject.Controllers
             {
                 new Claim(ClaimTypes.NameIdentifier, account.Id.ToString()),
                 new Claim(ClaimTypes.Name, account.Email)
-                
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -110,7 +123,7 @@ namespace MyProject.Controllers
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), authProperties);
 
-            return RedirectToAction("AccountInfo", "Authentication"); 
+            return RedirectToAction("AccountInfo", "Authentication");
         }
         public async Task<IActionResult> Update()
         {
@@ -123,7 +136,6 @@ namespace MyProject.Controllers
                 {
                     FirstName = account.FirstName,
                     LastName = account.LastName,
-                    Email = account.Email,
                     Phone = account.Phone
                 };
 
@@ -142,7 +154,6 @@ namespace MyProject.Controllers
 
                 if (account != null)
                 {
-                    account.Email = accountUpdateModel.Email;
                     account.FirstName = accountUpdateModel.FirstName;
                     account.LastName = accountUpdateModel.LastName;
                     account.Phone = accountUpdateModel.Phone;
@@ -164,17 +175,22 @@ namespace MyProject.Controllers
             if (ModelState.IsValid)
             {
                 var accountEmail = User.Identity.Name;
-                var account = await _applicationDbContext.Accounts.Where(a => a.Email == accountEmail).FirstOrDefaultAsync();
+                var account = await _applicationDbContext.Accounts.FirstOrDefaultAsync(a => a.Email == accountEmail);
 
                 if (account != null)
                 {
-                    if (account.Password != updatePasswordModel.OldPassword)
+                    
+                    if (!HashingHelper.VerifyPasswordHash(updatePasswordModel.OldPassword, account.PasswordHash, account.PasswordSalt))
                     {
                         ModelState.AddModelError("OldPassword", "Eski şifre yanlış.");
                         return View(updatePasswordModel);
                     }
 
-                    account.Password = updatePasswordModel.NewPassword;
+                    byte[] newPasswordHash, newPasswordSalt;
+                    HashingHelper.CreatePasswordHash(updatePasswordModel.NewPassword, out newPasswordHash, out newPasswordSalt);
+
+                    account.PasswordHash = newPasswordHash;
+                    account.PasswordSalt = newPasswordSalt;
                     account.ModifiedDate = DateTime.UtcNow;
 
                     _applicationDbContext.Accounts.Update(account);
@@ -184,6 +200,7 @@ namespace MyProject.Controllers
                     return RedirectToAction("AccountInfo", "Authentication");
                 }
             }
+
             return View(updatePasswordModel);
         }
 

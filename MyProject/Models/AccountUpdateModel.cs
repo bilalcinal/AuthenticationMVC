@@ -16,10 +16,9 @@ namespace MyProject.Models
         [RegularExpression(@"^[a-zA-ZğüşıöçĞÜŞİÖÇ]+$", ErrorMessage = "Sadece harf karakterleri kullanılabilir.")]
         public string LastName { get; set; }
 
-        [Required(ErrorMessage = "Telefon alanı zorunludur.")]
-        [RegularExpression(@"^[0-9]+$", ErrorMessage = "Sadece sayılar kullanılabilir.")]
+         [Required(ErrorMessage = "Telefon alanı zorunludur.")]
+        [RegularExpression(@"^5[0-9]{9,15}$", ErrorMessage = "Geçerli bir telefon numarası giriniz. Telefon numaranız 5 ile başlamalıdır")]
         public string Phone { get; set; }
-        public string Email { get; set; }
         public DateTime? ModifiedDate { get; set; }
         
     }
