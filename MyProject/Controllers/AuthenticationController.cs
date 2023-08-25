@@ -158,7 +158,7 @@ namespace MyProject.Controllers
                 var cacheKey = $"account:{accountModel.Email}";
                 var cacheEntryOptions = new DistributedCacheEntryOptions
                 {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
                 };
 
                 var accountData = new AccountModel
@@ -185,27 +185,47 @@ namespace MyProject.Controllers
         {
             var cachedAccount = await _distributedCache.GetStringAsync($"account:{loginModel.Email}");
 
+            AccountModel accountWithoutPassword = null;
+
             if (cachedAccount == null)
             {
-                ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
-                return View(loginModel);
+                var account = await _applicationDbContext.Accounts
+                    .Where(a => a.Email == loginModel.Email)
+                    .FirstOrDefaultAsync();
+
+                if (account != null && HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
+                {
+                    accountWithoutPassword = new AccountModel
+                    {
+                        FirstName = account.FirstName,
+                        LastName = account.LastName,
+                        Email = account.Email,
+                        Phone = account.Phone,
+                        CityId = account.CityId
+                    };
+
+                    var serializedData = JsonConvert.SerializeObject(accountWithoutPassword); 
+                    var cacheEntryOptions = new DistributedCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+                    };
+                    await _distributedCache.SetStringAsync($"account:{loginModel.Email}", serializedData, cacheEntryOptions);
+                }
+                else
+                {
+                    ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
+                    return View(loginModel);
+                }
             }
-
-            var accountWithoutPassword = JsonConvert.DeserializeObject<AccountModel>(cachedAccount);
-            var account = await _applicationDbContext.Accounts
-                .Where(a => a.Email == loginModel.Email)
-                .FirstOrDefaultAsync();
-
-            if (account == null || !HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
+            else
             {
-                ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
-                return View(loginModel);
+                accountWithoutPassword = JsonConvert.DeserializeObject<AccountModel>(cachedAccount);
             }
 
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, account.Id.ToString()),
-                new Claim(ClaimTypes.Name, account.Email)
+                new Claim(ClaimTypes.NameIdentifier, accountWithoutPassword.Email),
+                new Claim(ClaimTypes.Name, accountWithoutPassword.Email)
             };
 
             var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -215,8 +235,10 @@ namespace MyProject.Controllers
             };
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), authProperties);
+
             return RedirectToAction("AccountInfo", "Authentication");
         }
+
         [HttpPost]
         public async Task<IActionResult> Update(AccountUpdateModel accountUpdateModel)
         {
