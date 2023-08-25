@@ -1,6 +1,7 @@
 @model AccountInfoModel
 @{
     ViewData["Title"] = "Account Information";
+    var cities = (List<City>)ViewBag.Cities;
 }
 
 <div class="container p-3 text-center">
@@ -22,6 +23,10 @@
             <div class="mb-3">
                 <label>Email:</label>
                 <input type="text" class="form-control" value="@Model.Email" readonly />
+            </div>
+            <div class="mb-3">
+                <label>City:</label>
+                <input type="text" class="form-control" value="@Model.CityName" readonly />
             </div>
             <div class="mb-3">
                 <label>Phone:</label>
