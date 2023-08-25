@@ -4,27 +4,29 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using MyProject.Data;
 using MyProject.Models;
 using MyProject.Utilities.Security.Hashing;
+using Newtonsoft.Json;
 
 namespace MyProject.Controllers
 {
-    //şehir ve ilçeler
     public class AuthenticationController : Controller
     {
         private readonly ApplicationDbContext _applicationDbContext;
-
-        public AuthenticationController(ApplicationDbContext applicationDbContext)
+        private readonly IDistributedCache _distributedCache;
+        public AuthenticationController(ApplicationDbContext applicationDbContext, IDistributedCache distributedCache)
         {
             _applicationDbContext = applicationDbContext;
+            _distributedCache = distributedCache;
         }
 
         public IActionResult Index()
         {
             return View();
         }
-        
+        [HttpGet]
         public IActionResult Login()
         {
             return View();
@@ -33,10 +35,10 @@ namespace MyProject.Controllers
         public async Task<IActionResult> Register()
         {
           
-            ViewBag.Cities = await _applicationDbContext.Sehirlers.ToListAsync();
+            ViewBag.Cities = await _applicationDbContext.Cities.ToListAsync();
             return View();
-         }
-
+        }
+        [HttpGet]
          public IActionResult UpdatePassword()
         {
             return View();
@@ -67,18 +69,16 @@ namespace MyProject.Controllers
                 {
                     ModelState.AddModelError("Phone", "Bu telefon numarası zaten kullanılıyor.");
                 }
-
             }
 
             if (accountModel.Password != accountModel.PasswordAgain)
             {
-                ModelState.AddModelError("Password", "Password eşleşmiyor lütfen bir daha deneyiniz.");
+                ModelState.AddModelError("Password", "Parola eşleşmiyor. Lütfen tekrar deneyin.");
             }
 
             if (ModelState.IsValid)
             {
                 byte[] passwordHash, passwordSalt;
-
                 HashingHelper.CreatePasswordHash(accountModel.Password, out passwordHash, out passwordSalt);
 
                 _applicationDbContext.Accounts.Add(new Account
@@ -87,27 +87,71 @@ namespace MyProject.Controllers
                     LastName = accountModel.LastName,
                     Email = accountModel.Email,
                     Phone = accountModel.Phone,
-                    SehirId = accountModel.SehirId,
+                    CityId = accountModel.CityId,
                     PasswordHash = passwordHash,
                     PasswordSalt = passwordSalt,
                     CreatedDate = DateTime.UtcNow
                 });
 
                 await _applicationDbContext.SaveChangesAsync();
+
+                var cacheKey = $"account:{accountModel.Email}";
+                var cacheEntryOptions = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
+                };
+
+                var accountDataWithoutPassword = new AccountModel
+                {
+                    FirstName = accountModel.FirstName,
+                    LastName = accountModel.LastName,
+                    Email = accountModel.Email,
+                    Phone = accountModel.Phone,
+                    CityId = accountModel.CityId
+                };
+
+                var serializedData = JsonConvert.SerializeObject(accountDataWithoutPassword); 
+                await _distributedCache.SetStringAsync(cacheKey, serializedData, cacheEntryOptions);
+
                 TempData["SuccessMessage"] = "Kayıt işlemi başarıyla tamamlandı.";
                 return RedirectToAction("Login", "Authentication");
             }
-            ViewBag.Cities = await _applicationDbContext.Sehirlers.ToListAsync();
 
+            ViewBag.Cities = await _applicationDbContext.Cities.ToListAsync();
             return View(accountModel);
         }
 
         [HttpPost]
         public async Task<IActionResult> Login(LoginModel loginModel)
         {
-            var account = await _applicationDbContext.Accounts.FirstOrDefaultAsync(a => a.Email == loginModel.Email);
+            var cachedAccount = await _distributedCache.GetStringAsync(loginModel.Email);
+            Account account;
 
-            if (account == null || !HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
+            if (cachedAccount != null)
+            {
+                account = JsonConvert.DeserializeObject<Account>(cachedAccount);
+            }
+            else
+            {
+                account = await _applicationDbContext.Accounts
+                .Where(a => a.Email == loginModel.Email)
+                .FirstOrDefaultAsync();
+
+                if (account == null)
+                {
+                    ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
+                    return View(loginModel);
+                }
+
+                var serializedAccount = JsonConvert.SerializeObject(account);
+                var cacheOptions = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
+                };
+                await _distributedCache.SetStringAsync(loginModel.Email, serializedAccount, cacheOptions);
+            }
+
+            if (!HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
             {
                 ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
                 return View(loginModel);
@@ -126,23 +170,25 @@ namespace MyProject.Controllers
             };
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), authProperties);
-
             return RedirectToAction("AccountInfo", "Authentication");
         }
+
         [HttpGet]
         public async Task<IActionResult> Update()
         {
             var accountEmail = User.Identity.Name;
-            var account = await _applicationDbContext.Accounts.Where(a => a.Email == accountEmail).FirstOrDefaultAsync();
+            var account = await _applicationDbContext.Accounts
+            .Where(a => a.Email == accountEmail)
+            .FirstOrDefaultAsync();
             
             if (account != null)
             {
-                var cities = await _applicationDbContext.Sehirlers.ToListAsync();
+                var cities = await _applicationDbContext.Cities.ToListAsync();
                 var accountUpdateModel = new AccountUpdateModel
                 {
                     FirstName = account.FirstName,
                     LastName = account.LastName,
-                    SehirId = account.SehirId,
+                    CityId = account.CityId,
                     Phone = account.Phone
                 };
                 ViewBag.Cities = cities;
@@ -158,14 +204,16 @@ namespace MyProject.Controllers
             if (ModelState.IsValid)
             {
                 var accountEmail = User.Identity.Name;
-                var account = await _applicationDbContext.Accounts.Where(a => a.Email == accountEmail).FirstOrDefaultAsync();
+                var account = await _applicationDbContext.Accounts
+                .Where(a => a.Email == accountEmail)
+                .FirstOrDefaultAsync();
 
                 if (account != null)
                 {
                     account.FirstName = accountUpdateModel.FirstName;
                     account.LastName = accountUpdateModel.LastName;
                     account.Phone = accountUpdateModel.Phone;
-                    account.SehirId = accountUpdateModel.SehirId;
+                    account.CityId = accountUpdateModel.CityId;
                     account.ModifiedDate = DateTime.UtcNow;
 
                     _applicationDbContext.Accounts.Update(account);
@@ -176,7 +224,7 @@ namespace MyProject.Controllers
                 }
             }
 
-            var cities = await _applicationDbContext.Sehirlers.ToListAsync(); 
+            var cities = await _applicationDbContext.Cities.ToListAsync(); 
             ViewBag.Cities = cities; 
             return View(accountUpdateModel);
         }
@@ -187,11 +235,12 @@ namespace MyProject.Controllers
             if (ModelState.IsValid)
             {
                 var accountEmail = User.Identity.Name;
-                var account = await _applicationDbContext.Accounts.FirstOrDefaultAsync(a => a.Email == accountEmail);
+                var account = await _applicationDbContext.Accounts
+                .Where(a => a.Email == accountEmail)
+                .FirstOrDefaultAsync();
 
                 if (account != null)
                 {
-                    
                     if (!HashingHelper.VerifyPasswordHash(updatePasswordModel.OldPassword, account.PasswordHash, account.PasswordSalt))
                     {
                         ModelState.AddModelError("OldPassword", "Eski şifre yanlış.");
@@ -212,7 +261,6 @@ namespace MyProject.Controllers
                     return RedirectToAction("AccountInfo", "Authentication");
                 }
             }
-
             return View(updatePasswordModel);
         }
 
@@ -220,7 +268,9 @@ namespace MyProject.Controllers
         {
             var accountEmail = User.Identity.Name;
             
-            var account = await _applicationDbContext.Accounts.Where(a => a.Email == accountEmail).FirstOrDefaultAsync();
+            var account = await _applicationDbContext.Accounts
+            .Where(a => a.Email == accountEmail)
+            .FirstOrDefaultAsync();
 
             if (account != null)
             {
@@ -240,7 +290,9 @@ namespace MyProject.Controllers
         public async Task<IActionResult> Delete()
         {
             var accountEmail = User.Identity.Name;
-            var account = await _applicationDbContext.Accounts.Where(a => a.Email == accountEmail).FirstOrDefaultAsync();
+            var account = await _applicationDbContext.Accounts
+            .Where(a => a.Email == accountEmail)
+            .FirstOrDefaultAsync();
 
             if (account != null)
             {

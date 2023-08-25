@@ -7,13 +7,13 @@ using MyProject.Core;
 
 namespace MyProject.Data
 {
-    public class Sehirler 
+    public class City 
     {
         [Key]
-        public int SehirId { get; set; }
-        public string SehirAdi { get; set; }
-        public int PlakaNo { get; set; }
-        public int TelefonKodu { get; set; }
+        public int CityId { get; set; }
+        public string CityName{ get; set; }
+        public int NumberPlate { get; set; }
+        public int PhoneCode { get; set; }
         public int RowNumber { get; set; }
     }
 }

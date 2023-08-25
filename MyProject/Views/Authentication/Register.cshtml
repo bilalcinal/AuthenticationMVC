@@ -1,7 +1,7 @@
 @model AccountModel
 @{
     ViewData["Title"] = "Register";
-    var cities = (List<Sehirler>)ViewBag.Cities;
+    var cities = (List<City>)ViewBag.Cities;
 }
 
 <form method="post">
@@ -31,9 +31,9 @@
                 <span asp-validation-for="Email" class="text-danger"></span>
             </div>
             <div>
-            <select asp-for="SehirId" class="form-control">
+            <select asp-for="CityId" class="form-control">
                 @foreach(var item in cities){
-                <option value="@item.SehirId">@item.SehirAdi</option>
+                <option value="@item.CityId">@item.CityName</option>
                 }
             </select>
             </div>

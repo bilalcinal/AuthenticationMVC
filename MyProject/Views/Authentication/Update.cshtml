@@ -1,7 +1,7 @@
 @model AccountUpdateModel
 @{
     ViewData["Title"] = "Account Update";
-    var cities = (List<Sehirler>)ViewBag.Cities;
+    var cities = (List<City>)ViewBag.Cities;
 }
 
 <form method="post">
@@ -20,9 +20,9 @@
             <input asp-for="LastName" class="form-control" pattern="[A-Za-z]+" title="Please enter letters only" required />
             <span asp-validation-for="LastName" class="text-danger"></span>
         </div>
-        <select asp-for="SehirId" class="form-control">
+        <select asp-for="CityId" class="form-control">
             @foreach(var item in cities){
-                <option value="@item.SehirId">@item.SehirAdi</option>
+                <option value="@item.CityId">@item.CityName</option>
             }
         </select>
         <div class="mb-3">

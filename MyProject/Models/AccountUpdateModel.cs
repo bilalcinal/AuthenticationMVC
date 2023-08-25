@@ -19,7 +19,7 @@ namespace MyProject.Models
          [Required(ErrorMessage = "Telefon alanı zorunludur.")]
         [RegularExpression(@"^5[0-9]{9,15}$", ErrorMessage = "Geçerli bir telefon numarası giriniz. Telefon numaranız 5 ile başlamalıdır")]
         public string Phone { get; set; }
-        public int SehirId { get; set; }
+        public int CityId { get; set; }
         public DateTime? ModifiedDate { get; set; }
         
     }

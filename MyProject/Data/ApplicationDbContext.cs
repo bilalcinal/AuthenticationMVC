@@ -14,7 +14,7 @@ public class ApplicationDbContext : DbContext
     //     modelBuilder.Ignore<Sehirler>();     
     // }
     public DbSet<Account> Accounts { get; set; }
-    public DbSet<Sehirler> Sehirlers{ get; set; }
+    public DbSet<City> Cities{ get; set; }
 
 }
  
