@@ -12,6 +12,7 @@ namespace MyProject.Data
         public byte[] PasswordHash { get; set; }
         public byte[] PasswordSalt { get; set; }
         public int CityId { get; set; }
+        public bool IsActive { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? ModifiedDate { get; set; }
     }

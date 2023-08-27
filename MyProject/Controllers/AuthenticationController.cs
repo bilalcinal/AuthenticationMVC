@@ -7,7 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using MyProject.Data;
 using MyProject.Models;
+using MyProject.Utilities.Email;
 using MyProject.Utilities.Security.Hashing;
+using MyProject.Utilities.Token;
 using Newtonsoft.Json;
 
 namespace MyProject.Controllers
@@ -16,10 +18,12 @@ namespace MyProject.Controllers
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly IDistributedCache _distributedCache;
-        public AuthenticationController(ApplicationDbContext applicationDbContext, IDistributedCache distributedCache)
+        private readonly EmailService _emailService;
+        public AuthenticationController(ApplicationDbContext applicationDbContext, IDistributedCache distributedCache, EmailService emailService)
         {
             _applicationDbContext = applicationDbContext;
             _distributedCache = distributedCache;
+            _emailService = emailService;
         }
 
         public IActionResult Index()
@@ -99,7 +103,39 @@ namespace MyProject.Controllers
             return RedirectToAction("Index", "Home");
         }
         [HttpGet]
-         public IActionResult UpdatePassword()
+        public IActionResult ValidateTokenCallback(string validationToken)
+        {
+            if (string.IsNullOrEmpty(validationToken))
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            var registerToken = _applicationDbContext.RegisterTokens
+                .Where(rt => rt.Token == validationToken && rt.Expires > DateTime.UtcNow)
+                .FirstOrDefault();
+
+            if (registerToken == null)
+            {
+                return RedirectToAction("Index", "Home"); 
+            }
+
+            var account = _applicationDbContext.Accounts
+                .Where(a => a.Email == registerToken.Email)
+                .FirstOrDefault();
+
+            if (account == null)
+            {
+                return RedirectToAction("Index", "Home"); 
+            }
+
+            account.IsActive = true; 
+            _applicationDbContext.SaveChanges(); 
+
+            TempData["SuccessMessage"] = "Hesabınız başarıyla onaylandı.";
+            return RedirectToAction("Login", "Authentication"); 
+        }
+        [HttpGet]
+        public IActionResult UpdatePassword()
         {
             return View();
         }
@@ -108,7 +144,7 @@ namespace MyProject.Controllers
         {
             return View(); 
         }
-       [HttpPost]
+        [HttpPost]
         public async Task<IActionResult> Register(AccountModel accountModel)
         {
             var existingAccount = await _applicationDbContext.Accounts
@@ -131,7 +167,7 @@ namespace MyProject.Controllers
                 }
             }
 
-           if (accountModel.Password != accountModel.PasswordAgain)
+            if (accountModel.Password != accountModel.PasswordAgain)
             {
                 ModelState.AddModelError("Password", "Parola eşleşmiyor. Lütfen tekrar deneyin.");
             }
@@ -152,8 +188,45 @@ namespace MyProject.Controllers
                     PasswordSalt = passwordSalt,
                     CreatedDate = DateTime.UtcNow
                 });
+                var tokenGenerator = new TokenGenerator();
+                var token = tokenGenerator.GenerateToken();
+                var registerToken = new RegisterToken
+                {
+                    Email = accountModel.Email,
+                    Token = token,
+                    Expires = DateTime.UtcNow.AddMinutes(60) 
+                };
+
+                _applicationDbContext.Add(registerToken);
 
                 await _applicationDbContext.SaveChangesAsync();
+                var validateTokenUrl = Url.Action("ValidateTokenCallback", "Authentication", new { validationToken = token }, Request.Scheme);
+                var emailModel = new EmailModel
+                {
+                    ToEmail = accountModel.Email,
+                    Subject = "Hoş Geldiniz!",
+                    Body = $@"<!DOCTYPE html>
+                                <html lang=""en"">
+                                <head>
+                                    <meta charset=""UTF-8"">
+                                    <meta http-equiv=""X-UA-Compatible"" content=""IE=edge"">
+                                    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+                                    <title>Complete Registration</title>
+                                </head>
+                                <body>
+                                    <h1>Welcome to our platform!</h1>
+                                    <p>Thank you for registering. To complete your registration, please click the following link:</p>
+                                    <p><a href=""{validateTokenUrl}"">Complete Registration</a></p>
+                                    <p>If the link above doesn't work, you can copy and paste the following URL into your browser's address bar:</p>
+                                    <p>{validateTokenUrl}</p>
+                                    <p>We're excited to have you on board. If you have any questions, feel free to contact us.</p>
+                                    <p>Best regards,</p>
+                                    <p>Your Team</p>
+                                </body>
+                                </html>"
+                };
+
+                await _emailService.SendEmailAsync(emailModel);
 
                 var cacheKey = $"account:{accountModel.Email}";
                 var cacheEntryOptions = new DistributedCacheEntryOptions
@@ -180,6 +253,7 @@ namespace MyProject.Controllers
             ViewBag.Cities = await _applicationDbContext.Cities.ToListAsync();
             return View(accountModel);
         }
+    
         [HttpPost]
         public async Task<IActionResult> Login(LoginModel loginModel)
         {
@@ -195,6 +269,12 @@ namespace MyProject.Controllers
 
                 if (account != null && HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
                 {
+                    if (!account.IsActive)
+                    {
+                        ModelState.AddModelError("", "Hesap etkin değil. Giriş yapmak için hesabınızın etkin olması gerekmektedir.");
+                        return View(loginModel);
+                    }
+
                     accountWithoutPassword = new AccountModel
                     {
                         FirstName = account.FirstName,

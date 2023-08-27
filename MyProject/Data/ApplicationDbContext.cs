@@ -11,10 +11,12 @@ public class ApplicationDbContext : DbContext
     // protected override void OnModelCreating(ModelBuilder modelBuilder)
     // {
     //     base.OnModelCreating(modelBuilder);
-    //     modelBuilder.Ignore<Sehirler>();     
+    //     modelBuilder.Ignore<City>();     
     // }
     public DbSet<Account> Accounts { get; set; }
     public DbSet<City> Cities{ get; set; }
+    public DbSet<RegisterToken> RegisterTokens{ get; set; }
+
 
 }
  
