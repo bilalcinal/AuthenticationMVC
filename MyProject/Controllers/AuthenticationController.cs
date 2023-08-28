@@ -69,7 +69,6 @@ namespace MyProject.Controllers
 
             return RedirectToAction("Index", "Home");
         }
-
         [HttpGet]
         public async Task<IActionResult> AccountInfo()
         {
@@ -253,70 +252,80 @@ namespace MyProject.Controllers
             ViewBag.Cities = await _applicationDbContext.Cities.ToListAsync();
             return View(accountModel);
         }
-    
+        
         [HttpPost]
         public async Task<IActionResult> Login(LoginModel loginModel)
         {
-            var cachedAccount = await _distributedCache.GetStringAsync($"account:{loginModel.Email}");
-
-            AccountModel accountWithoutPassword = null;
-
-            if (cachedAccount == null)
+            if (ModelState.IsValid)
             {
-                var account = await _applicationDbContext.Accounts
-                    .Where(a => a.Email == loginModel.Email)
-                    .FirstOrDefaultAsync();
+                var cachedAccount = await _distributedCache.GetStringAsync($"account:{loginModel.Email}");
+                Account account = null; 
 
-                if (account != null && HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
+                if (cachedAccount == null)
                 {
+                    account = await _applicationDbContext.Accounts
+                        .Where(a => a.Email == loginModel.Email)
+                        .FirstOrDefaultAsync();
+
+                    if (account != null && HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
+                    {
+                        if (!account.IsActive) 
+                        {
+                            ModelState.AddModelError("", "Hesap etkin değil. Giriş yapmak için hesabınızın etkin olması gerekmektedir.");
+                            return View(loginModel);
+                        }
+
+                        var accountWithoutPassword = new AccountModel
+                        {
+                            FirstName = account.FirstName,
+                            LastName = account.LastName,
+                            Email = account.Email,
+                            Phone = account.Phone,
+                            CityId = account.CityId
+                        };
+
+                        var serializedData = JsonConvert.SerializeObject(accountWithoutPassword);
+                        var cacheEntryOptions = new DistributedCacheEntryOptions
+                        {
+                            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+                        };
+                        await _distributedCache.SetStringAsync($"account:{loginModel.Email}", serializedData, cacheEntryOptions);
+                    }
+                    else
+                    {
+                        ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
+                        return View(loginModel);
+                    }
+                }
+                else
+                {
+                    account = JsonConvert.DeserializeObject<Account>(cachedAccount);
+
                     if (!account.IsActive)
                     {
                         ModelState.AddModelError("", "Hesap etkin değil. Giriş yapmak için hesabınızın etkin olması gerekmektedir.");
                         return View(loginModel);
                     }
-
-                    accountWithoutPassword = new AccountModel
-                    {
-                        FirstName = account.FirstName,
-                        LastName = account.LastName,
-                        Email = account.Email,
-                        Phone = account.Phone,
-                        CityId = account.CityId
-                    };
-
-                    var serializedData = JsonConvert.SerializeObject(accountWithoutPassword); 
-                    var cacheEntryOptions = new DistributedCacheEntryOptions
-                    {
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
-                    };
-                    await _distributedCache.SetStringAsync($"account:{loginModel.Email}", serializedData, cacheEntryOptions);
                 }
-                else
+
+                var claims = new List<Claim>
                 {
-                    ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
-                    return View(loginModel);
-                }
+                    new Claim(ClaimTypes.NameIdentifier, account.Email),
+                    new Claim(ClaimTypes.Name, account.Email)
+                };
+
+                var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                var authProperties = new AuthenticationProperties
+                {
+                    IsPersistent = true
+                };
+
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), authProperties);
+
+                return RedirectToAction("AccountInfo", "Authentication");
             }
-            else
-            {
-                accountWithoutPassword = JsonConvert.DeserializeObject<AccountModel>(cachedAccount);
-            }
 
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, accountWithoutPassword.Email),
-                new Claim(ClaimTypes.Name, accountWithoutPassword.Email)
-            };
-
-            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-            var authProperties = new AuthenticationProperties
-            {
-                IsPersistent = true
-            };
-
-            await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), authProperties);
-
-            return RedirectToAction("AccountInfo", "Authentication");
+            return View(loginModel);
         }
 
         [HttpPost]
