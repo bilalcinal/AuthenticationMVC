@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using MyProject.Data;
 using MyProject.Models;
+using MyProject.Service;
 using MyProject.Utilities.Email;
 using MyProject.Utilities.Security.Hashing;
 using MyProject.Utilities.Token;
@@ -200,7 +201,7 @@ namespace MyProject.Controllers
 
                 await _applicationDbContext.SaveChangesAsync();
                 var validateTokenUrl = Url.Action("ValidateTokenCallback", "Authentication", new { validationToken = token }, Request.Scheme);
-                var emailModel = new EmailModel
+               var emailMessage = new EmailModel
                 {
                     ToEmail = accountModel.Email,
                     Subject = "Hoş Geldiniz!",
@@ -225,7 +226,17 @@ namespace MyProject.Controllers
                                 </html>"
                 };
 
-                await _emailService.SendEmailAsync(emailModel);
+                
+
+                    // EmailModel'i JSON formatına dönüştürün
+                var emailMessageJson = JsonConvert.SerializeObject(emailMessage);
+
+                // RabbitMQ kuyruğuna e-posta ekleyin
+                using (var rabbitMqService = new RabbitMqService())
+                {
+                    rabbitMqService.PublishEmail(emailMessageJson);
+                }
+
 
                 var cacheKey = $"account:{accountModel.Email}";
                 var cacheEntryOptions = new DistributedCacheEntryOptions
@@ -252,6 +263,7 @@ namespace MyProject.Controllers
             ViewBag.Cities = await _applicationDbContext.Cities.ToListAsync();
             return View(accountModel);
         }
+
         
         [HttpPost]
         public async Task<IActionResult> Login(LoginModel loginModel)

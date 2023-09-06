@@ -1,25 +1,26 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using MailKit.Net.Smtp;
 using MimeKit;
 using MyProject.Models;
+using MyProject.Service;
 
 namespace MyProject.Utilities.Email
-{   
+{
     public class EmailService
     {
         private readonly IConfiguration _configuration;
+        private readonly RabbitMqService _rabbitMqService;
 
-        public EmailService(IConfiguration configuration)
+        public EmailService(IConfiguration configuration, RabbitMqService rabbitMqService)
         {
             _configuration = configuration;
+            _rabbitMqService = rabbitMqService;
         }
 
         public async Task SendEmailAsync(EmailModel emailModel)
         {
-            try
+           try
             {
                 var message = new MimeMessage();
                 message.From.Add(new MailboxAddress("BilalCinal", "hbilalcinal@gmail.com")); 

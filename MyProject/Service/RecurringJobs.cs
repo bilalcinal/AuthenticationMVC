@@ -1,19 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Hangfire;
-using Hangfire.Common;
 using Microsoft.EntityFrameworkCore;
 using MyProject.Data;
 using MyProject.Models;
+using MyProject.Service;
 using MyProject.Utilities.Email;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace MyProject.Service
 {
     public class RecurringJobs
     {
-        
         private readonly IServiceProvider _serviceProvider;
 
         public RecurringJobs(IServiceProvider serviceProvider)
@@ -52,8 +50,8 @@ namespace MyProject.Service
         public static void ConfigureRecurringJobs(IServiceProvider serviceProvider)
         {
             var recurringJobManager = serviceProvider.GetRequiredService<IRecurringJobManager>();
-
-            recurringJobManager.AddOrUpdate("HatırlatmaEpostalarınıGonder", Job.FromExpression(() => new RecurringJobs(null).SendReminderEmailsJob()), "21 9 * * *");
+            // E-posta hatırlatmalarını gönderme görevini düzenle
+            recurringJobManager.AddOrUpdate("HatırlatmaEpostalarınıGonder", () => new RecurringJobs(serviceProvider).SendReminderEmailsJob(), Cron.Daily);
         }
     }
 }

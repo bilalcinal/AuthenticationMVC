@@ -26,9 +26,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Home/AccessDenied"; 
     });
 builder.Services.AddSingleton<EmailService>();
+builder.Services.AddTransient<RabbitMqService>();
 var serviceProvider = builder.Services.BuildServiceProvider();
 RecurringJobs.ConfigureRecurringJobs(serviceProvider);
 
+var emailQueueConsumer = new EmailQueueConsumer();
 var app = builder.Build();
 
 
