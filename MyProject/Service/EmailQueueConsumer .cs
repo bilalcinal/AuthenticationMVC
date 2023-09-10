@@ -21,9 +21,7 @@ namespace MyProject.Service
         {
             _rabbitMqService = rabbitMqService;
         }
-
-      
-
+        
         public EmailQueueConsumer()
         {
             var factory = new ConnectionFactory
@@ -43,10 +41,8 @@ namespace MyProject.Service
                 var body = e.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
 
-                // Deserialize the message into an EmailModel
                 var emailMessage = Newtonsoft.Json.JsonConvert.DeserializeObject<EmailModel>(message);
 
-                // Process the email message (send email, etc.)
                 ProcessEmail(emailMessage);
 
                 _channel.BasicAck(e.DeliveryTag, false);
@@ -56,18 +52,15 @@ namespace MyProject.Service
         }
         private void ProcessEmail(EmailModel emailMessage)
         {
-            // Implement your email processing logic here.
-            // For example, sending the email using an SMTP client.
             try
             {
                 using (var smtpClient = new SmtpClient())
                 {
-                    // Configure the SMTP client with your settings.
                     smtpClient.Connect("smtp.gmail.com", 587, false);
                     smtpClient.Authenticate("hbilalcinal@gmail.com", "tqktaustbvneybed");
 
                     var message = new MimeMessage();
-                    message.From.Add(new MailboxAddress("BilalCinal", "hbilalcinal@gmail.com")); // Replace with your sender information
+                    message.From.Add(new MailboxAddress("BilalCinal", "hbilalcinal@gmail.com"));
                     message.To.Add(new MailboxAddress("", emailMessage.ToEmail));
                     message.Subject = emailMessage.Subject;
 
@@ -79,17 +72,13 @@ namespace MyProject.Service
                     smtpClient.Disconnect(true);
                 }
 
-                // After sending the email, create an email confirmation message
                 var confirmationMessage = new EmailModel
                 {
                     ToEmail = emailMessage.ToEmail,
-                    // You can add more properties to the confirmation message if needed.
                 };
 
-                // Serialize the confirmation message to JSON
                 var confirmationMessageJson = JsonConvert.SerializeObject(confirmationMessage);
 
-                // Publish the confirmation message to the RabbitMQ queue
                 using (var rabbitMqService = new RabbitMqService())
                 {
                     rabbitMqService.PublishEmail(confirmationMessageJson);
@@ -97,8 +86,6 @@ namespace MyProject.Service
             }
             catch (Exception ex)
             {
-                // Handle any exceptions that occur during email sending.
-                // You can log the error or take appropriate action.
                 Console.WriteLine($"Error sending email: {ex.Message}");
             }
         }

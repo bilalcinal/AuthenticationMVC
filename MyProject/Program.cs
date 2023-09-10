@@ -3,8 +3,10 @@ using HangfireBasicAuthenticationFilter;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using MyProject.Data;
+using MyProject.Interface;
 using MyProject.Service;
 using MyProject.Utilities.Email;
+using MyProject.Utilities.Token;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,8 +27,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.LogoutPath = "/Authentication/Logout"; 
         options.AccessDeniedPath = "/Home/AccessDenied"; 
     });
+    
+builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddSingleton<EmailService>();
 builder.Services.AddTransient<RabbitMqService>();
+
 var serviceProvider = builder.Services.BuildServiceProvider();
 RecurringJobs.ConfigureRecurringJobs(serviceProvider);
 
@@ -37,7 +42,6 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 

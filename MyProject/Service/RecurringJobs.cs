@@ -50,7 +50,6 @@ namespace MyProject.Service
         public static void ConfigureRecurringJobs(IServiceProvider serviceProvider)
         {
             var recurringJobManager = serviceProvider.GetRequiredService<IRecurringJobManager>();
-            // E-posta hatırlatmalarını gönderme görevini düzenle
             recurringJobManager.AddOrUpdate("HatırlatmaEpostalarınıGonder", () => new RecurringJobs(serviceProvider).SendReminderEmailsJob(), Cron.Daily);
         }
     }
