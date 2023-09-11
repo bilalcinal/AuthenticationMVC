@@ -21,7 +21,7 @@ namespace MyProject.Service
         {
             _rabbitMqService = rabbitMqService;
         }
-        
+
         public EmailQueueConsumer()
         {
             var factory = new ConnectionFactory
@@ -71,18 +71,6 @@ namespace MyProject.Service
                     smtpClient.Send(message);
                     smtpClient.Disconnect(true);
                 }
-
-                var confirmationMessage = new EmailModel
-                {
-                    ToEmail = emailMessage.ToEmail,
-                };
-
-                var confirmationMessageJson = JsonConvert.SerializeObject(confirmationMessage);
-
-                using (var rabbitMqService = new RabbitMqService())
-                {
-                    rabbitMqService.PublishEmail(confirmationMessageJson);
-                }
             }
             catch (Exception ex)
             {
@@ -90,7 +78,7 @@ namespace MyProject.Service
             }
         }
 
-              public void Dispose()
+        public void Dispose()
         {
             _channel.Close();
             _connection.Close();

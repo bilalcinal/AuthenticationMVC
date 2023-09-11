@@ -37,7 +37,7 @@ namespace MyProject.Controllers
         [HttpGet]
         public async Task<IActionResult> Register()
         {
-            ViewBag.Cities = await _applicationDbContext.Cities.ToListAsync();
+            ViewBag.Cities = await _applicationDbContext.Cities.OrderBy(p => p.CityName).ToListAsync();
             return View();
         }
         #endregion
@@ -46,7 +46,7 @@ namespace MyProject.Controllers
         public async Task<IActionResult> Update()
         {
             var accountEmail = User.Identity.Name;
-            
+
             var accountUpdateModel = await _accountService.GetAccountForUpdateAsync(accountEmail);
 
             if (accountUpdateModel != null)
@@ -104,7 +104,7 @@ namespace MyProject.Controllers
         [HttpGet]
         public IActionResult DeleteConfirmation()
         {
-            return View(); 
+            return View();
         }
         #endregion
         #region Post Register
@@ -117,11 +117,7 @@ namespace MyProject.Controllers
 
             if (existingAccount != null)
             {
-                if (existingAccount.Email == accountModel.Email && existingAccount.Phone == accountModel.Phone)
-                {
-                    ModelState.AddModelError("Email", "Bu e-posta adresi ve telefon numarası zaten kullanılıyor.");
-                }
-                else if (existingAccount.Email == accountModel.Email)
+                if (existingAccount.Email == accountModel.Email)
                 {
                     ModelState.AddModelError("Email", "Bu e-posta adresi zaten kullanılıyor.");
                 }
@@ -151,7 +147,7 @@ namespace MyProject.Controllers
                 }
             }
 
-            ViewBag.Cities = await _applicationDbContext.Cities.ToListAsync();
+            ViewBag.Cities = await _applicationDbContext.Cities.OrderBy(p => p.CityName).ToListAsync();
             return View(accountModel);
         }
         #endregion
@@ -204,7 +200,7 @@ namespace MyProject.Controllers
             if (ModelState.IsValid)
             {
                 var accountEmail = User.Identity.Name;
-                
+
                 var updateSuccessful = await _accountService.UpdateAccountAsync(accountUpdateModel, accountEmail);
 
                 if (updateSuccessful)
@@ -230,7 +226,7 @@ namespace MyProject.Controllers
             if (ModelState.IsValid)
             {
                 var accountEmail = User.Identity.Name;
-                
+
                 var updateSuccessful = await _accountService.UpdatePasswordAsync(updatePasswordModel, accountEmail);
 
                 if (updateSuccessful)
@@ -251,7 +247,7 @@ namespace MyProject.Controllers
         public async Task<IActionResult> Delete()
         {
             var accountEmail = User.Identity.Name;
-            
+
             var deleteSuccessful = await _accountService.DeleteAccountAsync(accountEmail);
 
             if (deleteSuccessful)
