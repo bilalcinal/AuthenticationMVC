@@ -15,4 +15,8 @@ html {
 
 body {
   margin-bottom: 60px;
+  background-image: url('/image/pexels-stephan-seeber.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }

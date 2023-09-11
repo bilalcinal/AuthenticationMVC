@@ -4,46 +4,44 @@
     var cities = (List<City>)ViewBag.Cities;
 }
 
-<div class="container p-3 text-center">
-    <div class="row pt-4">
-        <div class="col-12">
-            <h2 class="text-primary">Account Information</h2>
-        </div>
-    </div>
-    <div class="row pt-4">
-        <div class="col-md-6 offset-md-3">
-            <div class="mb-3">
-                <label>First Name:</label>
-                <input type="text" class="form-control" value="@Model.FirstName" readonly />
+<div class="container text-center">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h2 class="text-primary mb-4">Account Information</h2>
+            <div class="card">
+                <div class="card-body">
+                    <form>
+                        <div class="mb-3">
+                            <label>First Name:</label>
+                            <input type="text" class="form-control form-control-lg" value="@Model.FirstName" readonly />
+                        </div>
+                        <div class="mb-3">
+                            <label>Last Name:</label>
+                            <input type="text" class="form-control form-control-lg" value="@Model.LastName" readonly />
+                        </div>
+                        <div class="mb-3">
+                            <label>Email:</label>
+                            <input type="text" class="form-control form-control-lg" value="@Model.Email" readonly />
+                        </div>
+                        <div class="mb-3">
+                            <label>City:</label>
+                            <input type="text" class="form-control form-control-lg" value="@Model.CityName" readonly />
+                        </div>
+                        <div class="mb-3">
+                            <label>Phone:</label>
+                            <input type="text" class="form-control form-control-lg" value="@Model.Phone" readonly />
+                        </div>
+                    </form>
+                    <div class="mt-4">
+                        <form asp-controller="Authentication" asp-action="Delete" method="post" onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
+                            <button type="submit" class="btn btn-danger" id="deleteButton">Delete Account</button>
+                        </form>
+                        <a asp-controller="Authentication" asp-action="Login" class="btn btn-secondary">Logout</a>
+                        <a asp-controller="Authentication" asp-action="Update" class="btn btn-secondary">Account Update</a>
+                        <a asp-controller="Authentication" asp-action="UpdatePassword" class="btn btn-secondary">Password Reset</a>
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label>Last Name:</label>
-                <input type="text" class="form-control" value="@Model.LastName" readonly />
-            </div>
-            <div class="mb-3">
-                <label>Email:</label>
-                <input type="text" class="form-control" value="@Model.Email" readonly />
-            </div>
-            <div class="mb-3">
-                <label>City:</label>
-                <input type="text" class="form-control" value="@Model.CityName" readonly />
-            </div>
-            <div class="mb-3">
-                <label>Phone:</label>
-                <input type="text" class="form-control" value="@Model.Phone" readonly />
-            </div>
-            <form asp-controller="Authentication" asp-action="Delete" method="post" onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
-                <button type="submit" class="btn btn-danger" id="deleteButton">Delete Account</button>
-            </form>
-            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
-                Logout
-            </a>
-            <a asp-controller="Authentication" asp-action="Update" class="btn btn-secondary">
-                Account Update
-            </a>
-            <a asp-controller="Authentication" asp-action="UpdatePassword" class="btn btn-secondary">
-                Password Reset
-            </a>
         </div>
     </div>
 </div>

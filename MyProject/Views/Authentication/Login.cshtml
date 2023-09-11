@@ -2,28 +2,62 @@
 @{
     ViewData["Title"] = "Login";
 }
-<form method="post">
-    <div class="border pt-3 mt-4">
-        <div class="row pb-2">
-            <h2 class="text-primary">Login</h2>
+
+<!-- Arka planı biraz opaklaştıralım -->
+<section class="background-radial-gradient overflow-hidden">
+    <div class="container px-4 py-5 px-md-5 text-center text-lg-start my-5">
+        <div class="row gx-lg-5 align-items-center mb-5">
+            <!-- Yazılara gölge ekleyelim -->
+            <div class="col-lg-6 mb-5 mb-lg-0" style="z-index: 10; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);">
+                <h1 class="my-5 display-5 fw-bold ls-tight" style="color: hsl(218, 81%, 95%)">
+                    Welcome Back! <br />
+                    <span style="color: hsl(218, 81%, 75%)">Sign in to continue</span>
+                </h1>
+            </div>
+
+            <div class="col-lg-6 mb-5 mb-lg-0 position-relative">
+                <!-- Kartın arka planını biraz opaklaştıralım -->
+                <div class="card bg-glass" style="background-color: rgba(255, 255, 255, 0.8);">
+                    <div class="card-body px-4 py-5 px-md-5">
+                        <form method="post">
+                            <div asp-validation-summary="All"></div>
+
+                            <div class="mb-3">
+                                <label asp-for="Email"></label>
+                                <input asp-for="Email" class="form-control" />
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label asp-for="Password"></label>
+                                <input asp-for="Password" class="form-control" type="password" />
+                                <span asp-validation-for="Password" class="text-danger"></span>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary btn-block mb-4" style="width: 100%;">Sign In</button>                        
+                        </form>
+                        <div class="text-center">
+                            <p>Don't you have an account? <a asp-controller="Authentication" asp-action="Register" class="text-decoration-none text-primary">
+                                <i class="bi bi-plus-circle"></i> Register
+                            </a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div asp-validation-summary="All"></div>
-        <div class="mb-3">
-            <label asp-for="Email"></label>
-            <input asp-for="Email" class="form-control" />
-            <span asp-validation-for="Email" class="text-danger"></span>
-        </div>
-         <div class="mb-3">
-            <label asp-for="Password"></label>
-            <input asp-for="Password" class="form-control" type="password" />
-            <span asp-validation-for="Password" class="text-danger"></span>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:150px">Login</button>
     </div>
-</form>
+</section>
+
 @section Scripts
 {
+    <script>
+        $(document).ready(function () {
+            $("#success-alert").fadeTo(2000, 500).slideUp(500, function () {
+                $("#success-alert").slideUp(500);
+            });
+        });
+    </script>
     @{
-      <partial name="_ValidationScriptsPartial"/>
-     }
+        <partial name="_ValidationScriptsPartial" />
+    }
 }
