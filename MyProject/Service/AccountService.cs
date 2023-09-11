@@ -3,7 +3,6 @@ using Microsoft.Extensions.Caching.Distributed;
 using MyProject.Data;
 using MyProject.Interface;
 using MyProject.Models;
-using MyProject.Utilities.Email;
 using MyProject.Utilities.Security.Hashing;
 using MyProject.Utilities.Token;
 using Newtonsoft.Json;
@@ -16,7 +15,7 @@ namespace MyProject.Service
         private readonly EmailService _emailService;
         private readonly RabbitMqService _rabbitMqService;
         private readonly TokenGenerator _tokenGenerator;
-        private readonly IDistributedCache _distributedCache;  // Added distributed cache
+        private readonly IDistributedCache _distributedCache; 
 
         public AccountService(ApplicationDbContext applicationDbContext, EmailService emailService, RabbitMqService rabbitMqService, TokenGenerator tokenGenerator, IDistributedCache distributedCache)
         {
@@ -100,7 +99,8 @@ namespace MyProject.Service
                         LastName = account.LastName,
                         Email = account.Email,
                         Phone = account.Phone,
-                        CityId = account.CityId
+                        CityId = account.CityId,
+                        IsActive = account.IsActive
                     };
 
                     var serializedData = JsonConvert.SerializeObject(accountModel);
@@ -165,6 +165,7 @@ namespace MyProject.Service
                 LastName = account.LastName,
                 Email = account.Email,
                 Phone = account.Phone,
+                IsActive = account.IsActive,
                 CityId = account.CityId
             };
             var serializedData = JsonConvert.SerializeObject(accountData);
@@ -198,8 +199,24 @@ namespace MyProject.Service
             account.ModifiedDate = DateTime.UtcNow;
 
             _applicationDbContext.Accounts.Update(account);
+            
             await _applicationDbContext.SaveChangesAsync();
+            var cacheKey = $"account:{accountEmail}";
+            var cachedAccount = await _distributedCache.GetStringAsync(cacheKey);
 
+            if (!string.IsNullOrEmpty(cachedAccount))
+            {
+                var cachedAccountModel = JsonConvert.DeserializeObject<AccountModel>(cachedAccount);
+                
+                cachedAccountModel.IsActive = account.IsActive;
+                var updatedSerializedData = JsonConvert.SerializeObject(cachedAccountModel);
+
+                var cacheEntryOptions = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
+                };
+                await _distributedCache.SetStringAsync(cacheKey, updatedSerializedData, cacheEntryOptions);
+            }
             return true;
         }
         #endregion

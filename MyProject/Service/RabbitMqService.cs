@@ -23,7 +23,7 @@ namespace MyProject.Service
 
         public void PublishEmail(string emailMessage)
         {
-            
+
             _channel.QueueDeclare(queue: "email_queue", durable: true, false, false, null);
             var body = Encoding.UTF8.GetBytes(emailMessage);
 

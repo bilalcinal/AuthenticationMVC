@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using MyProject.Data;
 using MyProject.Models;
 using MyProject.Service;
-using MyProject.Utilities.Email;
 using System;
 using System.Linq;
 using System.Threading.Tasks;

@@ -25,5 +25,6 @@ namespace MyProject.Models
         [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{1,20}$", ErrorMessage = "Şifre en az bir büyük harf, bir küçük harf, bir rakam ve bir özel karakter içermelidir.Şifre 20 karakterden uzun olmamalıdır.")]
         public string Password { get; set; }
         public string PasswordAgain { get; set; }
+        public bool IsActive { get; set; }
     }
 }

@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using MyProject.Data;
 using MyProject.Interface;
 using MyProject.Service;
-using MyProject.Utilities.Email;
 using MyProject.Utilities.Token;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,9 +28,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
     
 builder.Services.AddScoped<IAccountService, AccountService>();
-builder.Services.AddSingleton<EmailService>();
+builder.Services.AddScoped<EmailService>();
 builder.Services.AddTransient<RabbitMqService>();
-
+builder.Services.AddSingleton<TokenGenerator>();
 var serviceProvider = builder.Services.BuildServiceProvider();
 RecurringJobs.ConfigureRecurringJobs(serviceProvider);
 

@@ -6,8 +6,9 @@ using MyProject.Data;
 using MyProject.Models;
 using MyProject.Service;
 using MyProject.Utilities.Token;
+using Newtonsoft.Json;
 
-namespace MyProject.Utilities.Email
+namespace MyProject.Service
 {
     public class EmailService
     {
@@ -51,7 +52,7 @@ namespace MyProject.Utilities.Email
         }
         public async Task SendValidationEmailAsync(AccountModel accountModel)
         {
-            var token = _tokenGenerator.GenerateToken(); 
+            var token = _tokenGenerator.GenerateToken();
             var registerTokenEntity = new RegisterToken
             {
                 Email = accountModel.Email,
@@ -62,7 +63,7 @@ namespace MyProject.Utilities.Email
             await _applicationDbContext.RegisterTokens.AddAsync(registerTokenEntity);
             await _applicationDbContext.SaveChangesAsync();
 
-            string validateTokenUrl = $"http://localhost:5000/confirm?token={token}";
+            string validateTokenUrl = $"https://localhost:7179/Authentication/ValidateTokenCallBack?validationToken={token}";
             var emailModel = new EmailModel
             {
                 ToEmail = accountModel.Email,
@@ -87,7 +88,9 @@ namespace MyProject.Utilities.Email
                             </body>
                             </html>"
             };
-            await SendEmailAsync(emailModel);
+            var emailModelJson = JsonConvert.SerializeObject(emailModel);
+
+            _rabbitMqService.PublishEmail(emailModelJson);
         }
     }
 }

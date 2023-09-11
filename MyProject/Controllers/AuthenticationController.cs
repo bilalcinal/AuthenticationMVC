@@ -5,17 +5,17 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using MyProject.Data;
+using MyProject.Interface;
 using MyProject.Models;
 using MyProject.Service;
-using MyProject.Utilities.Email;
 
 namespace MyProject.Controllers
 {
     public class AuthenticationController : Controller
     {
-        private readonly AccountService _accountService;
+        private readonly IAccountService _accountService;
         private readonly ApplicationDbContext _applicationDbContext;
-        public AuthenticationController(ApplicationDbContext applicationDbContext, IDistributedCache distributedCache, EmailService emailService, AccountService accountService)
+        public AuthenticationController(ApplicationDbContext applicationDbContext, IDistributedCache distributedCache, EmailService emailService, IAccountService accountService)
         {
             _applicationDbContext = applicationDbContext;
             _accountService = accountService;
@@ -64,7 +64,7 @@ namespace MyProject.Controllers
         public async Task<IActionResult> AccountInfo()
         {
             var accountEmail = User.Identity.Name;
-            var accountInfoModel = await _accountService.GetAccountInfoAsync(accountEmail);  // _accountService bir IAccountService tipinde bir field veya property olmalı.
+            var accountInfoModel = await _accountService.GetAccountInfoAsync(accountEmail);
 
             if (accountInfoModel != null)
             {
@@ -83,8 +83,7 @@ namespace MyProject.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            var result = await _accountService.ValidateAndActivateAccountAsync(validationToken); // _accountService, IAccountService tipinde bir field olmalıdır ve constructor üzerinden enjekte edilmelidir.
-
+            var result = await _accountService.ValidateAndActivateAccountAsync(validationToken);
             if (!result)
             {
                 return RedirectToAction("Index", "Home");
