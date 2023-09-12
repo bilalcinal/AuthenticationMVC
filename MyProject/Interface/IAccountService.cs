@@ -6,7 +6,7 @@ namespace MyProject.Interface
     public interface IAccountService
     {
         Task<bool> CreateAsync(AccountModel accountModel);
-        Task<bool> ValidateToken(string email, string token);
+        //Task<bool> ValidateToken(string email, string token);
         Task<AccountModel> LoginAsync(LoginModel loginModel);
         Task<bool> UpdateAccountAsync(AccountUpdateModel accountUpdateModel, string accountEmail);
         Task<bool> UpdatePasswordAsync(UpdatePasswordModel updatePasswordModel, string accountEmail);

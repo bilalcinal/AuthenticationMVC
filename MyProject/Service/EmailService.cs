@@ -52,6 +52,7 @@ namespace MyProject.Service
         }
         public async Task SendValidationEmailAsync(AccountModel accountModel)
         {
+            // Bir Token üretiyoruz.
             var token = _tokenGenerator.GenerateToken();
             var registerTokenEntity = new RegisterToken
             {
@@ -63,6 +64,7 @@ namespace MyProject.Service
             await _applicationDbContext.RegisterTokens.AddAsync(registerTokenEntity);
             await _applicationDbContext.SaveChangesAsync();
 
+            // Eğer İşlemlerde sıkıntı yoksa mail tamplate oluşturuluyor
             string validateTokenUrl = $"https://localhost:7179/Authentication/ValidateTokenCallBack?validationToken={token}";
             var emailModel = new EmailModel
             {
@@ -89,7 +91,8 @@ namespace MyProject.Service
                             </html>"
             };
             var emailModelJson = JsonConvert.SerializeObject(emailModel);
-
+            
+            // RabbitMq kuyruğuna iletiliyor.
             _rabbitMqService.PublishEmail(emailModelJson);
         }
     }

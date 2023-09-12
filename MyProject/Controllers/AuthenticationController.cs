@@ -20,100 +20,32 @@ namespace MyProject.Controllers
             _applicationDbContext = applicationDbContext;
             _accountService = accountService;
         }
-        #region Get Index
+
+        #region  Index
         public IActionResult Index()
         {
             return View();
         }
         #endregion
-        #region Get Login
-        [HttpGet]
-        public IActionResult Login()
-        {
-            return View();
-        }
-        #endregion
-        #region Get Register
+
+        #region Register
+
         [HttpGet]
         public async Task<IActionResult> Register()
         {
-            ViewBag.Cities = await _applicationDbContext.Cities.OrderBy(p => p.CityName).ToListAsync();
+            ViewBag.Cities = await _applicationDbContext.Cities
+                                    .OrderBy(p => p.CityName)
+                                    .ToListAsync();
             return View();
         }
-        #endregion
-        #region Get Update
-        [HttpGet]
-        public async Task<IActionResult> Update()
-        {
-            var accountEmail = User.Identity.Name;
 
-            var accountUpdateModel = await _accountService.GetAccountForUpdateAsync(accountEmail);
-
-            if (accountUpdateModel != null)
-            {
-                var cities = await _applicationDbContext.Cities.ToListAsync();
-                ViewBag.Cities = cities;
-                return View(accountUpdateModel);
-            }
-
-            return RedirectToAction("Index", "Home");
-        }
-        #endregion
-        #region Get AccountInfo
-        [HttpGet]
-        public async Task<IActionResult> AccountInfo()
-        {
-            var accountEmail = User.Identity.Name;
-            var accountInfoModel = await _accountService.GetAccountInfoAsync(accountEmail);
-
-            if (accountInfoModel != null)
-            {
-                return View(accountInfoModel);
-            }
-
-            return RedirectToAction("Index", "Home");
-        }
-        #endregion
-        #region Get ValidateTokenCallBack
-        [HttpGet]
-        public async Task<IActionResult> ValidateTokenCallBack(string validationToken)
-        {
-            if (string.IsNullOrEmpty(validationToken))
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            var result = await _accountService.ValidateAndActivateAccountAsync(validationToken);
-            if (!result)
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            TempData["SuccessMessage"] = "Hesabınız başarıyla onaylandı.";
-            return RedirectToAction("Login", "Authentication");
-        }
-        #endregion
-        #region Get UpdatePassword
-        [HttpGet]
-        public IActionResult UpdatePassword()
-        {
-            return View();
-        }
-        #endregion
-        #region Get DeleteConfirmation
-        [HttpGet]
-        public IActionResult DeleteConfirmation()
-        {
-            return View();
-        }
-        #endregion
-        #region Post Register
         [HttpPost]
         public async Task<IActionResult> Register(AccountModel accountModel)
         {
+            // Girilen değerlerin veritabanında var olup olmadığını kontrol ediyoruz.
             var existingAccount = await _applicationDbContext.Accounts
-                .Where(a => a.Email == accountModel.Email || a.Phone == accountModel.Phone)
-                .FirstOrDefaultAsync();
+                                        .Where(a => a.Email == accountModel.Email || a.Phone == accountModel.Phone)
+                                        .FirstOrDefaultAsync();
 
             if (existingAccount != null)
             {
@@ -126,12 +58,13 @@ namespace MyProject.Controllers
                     ModelState.AddModelError("Phone", "Bu telefon numarası zaten kullanılıyor.");
                 }
             }
-
+            // Password PasswordAgain eşleşip eşleşmediğine bakıyoruz.
             if (accountModel.Password != accountModel.PasswordAgain)
             {
                 ModelState.AddModelError("Password", "Parola eşleşmiyor. Lütfen tekrar deneyin.");
             }
 
+            // Eğer yukarıda ki işlemlerde bir sıkıntı yoksa CreateAsync Service i çalışıyor
             if (ModelState.IsValid)
             {
                 bool result = await _accountService.CreateAsync(accountModel);
@@ -147,11 +80,21 @@ namespace MyProject.Controllers
                 }
             }
 
-            ViewBag.Cities = await _applicationDbContext.Cities.OrderBy(p => p.CityName).ToListAsync();
+            ViewBag.Cities = await _applicationDbContext.Cities
+                                    .OrderBy(p => p.CityName)
+                                    .ToListAsync();
             return View(accountModel);
         }
         #endregion
-        #region Post Login
+
+        #region Login
+
+        [HttpGet]
+        public IActionResult Login()
+        {
+            return View();
+        }
+
         [HttpPost]
         public async Task<IActionResult> Login(LoginModel loginModel)
         {
@@ -162,26 +105,33 @@ namespace MyProject.Controllers
 
             try
             {
+                // LoginAsync içinde işlemler yapılıyor
                 var accountModel = await _accountService.LoginAsync(loginModel);
 
+                // Eğer hesap modeli null ise şifre veya e-posta yanlış
                 if (accountModel == null)
                 {
                     ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
                     return View(loginModel);
                 }
 
+                // Kullanıcının claim'lerini oluştur
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, accountModel.Email),
                     new Claim(ClaimTypes.Name, accountModel.Email)
                 };
 
+                // Kullanıcı kimliğini oluştur
                 var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+
+                // Oturum açma özelliklerini ayarla
                 var authProperties = new AuthenticationProperties
                 {
                     IsPersistent = true
                 };
 
+                // Kullanıcıyı oturum açtır
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity), authProperties);
 
                 return RedirectToAction("AccountInfo", "Authentication");
@@ -192,8 +142,28 @@ namespace MyProject.Controllers
                 return View(loginModel);
             }
         }
+
         #endregion
-        #region Post Update
+
+        #region Update
+        [HttpGet]
+        public async Task<IActionResult> Update()
+        {
+ 
+            var accountEmail = User.Identity.Name;
+
+            var accountUpdateModel = await _accountService.GetAccountForUpdateAsync(accountEmail);
+
+            if (accountUpdateModel != null)
+            {
+                var cities = await _applicationDbContext.Cities.ToListAsync();
+                ViewBag.Cities = cities;
+                return View(accountUpdateModel);
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+
         [HttpPost]
         public async Task<IActionResult> Update(AccountUpdateModel accountUpdateModel)
         {
@@ -219,7 +189,14 @@ namespace MyProject.Controllers
             return View(accountUpdateModel);
         }
         #endregion
-        #region Post UpdatePassword
+
+        #region UpdatePassword
+        [HttpGet]
+        public IActionResult UpdatePassword()
+        {
+            return View();
+        }
+
         [HttpPost]
         public async Task<IActionResult> UpdatePassword(UpdatePasswordModel updatePasswordModel)
         {
@@ -242,7 +219,51 @@ namespace MyProject.Controllers
             return View(updatePasswordModel);
         }
         #endregion
-        #region Post delete
+
+        #region AccountInfo
+        [HttpGet]
+        public async Task<IActionResult> AccountInfo()
+        {
+            var accountEmail = User.Identity.Name;
+            var accountInfoModel = await _accountService.GetAccountInfoAsync(accountEmail);
+
+            if (accountInfoModel != null)
+            {
+                return View(accountInfoModel);
+            }
+
+            return RedirectToAction("Index", "Home");
+        }
+        #endregion
+
+        #region ValidateTokenCallBack
+        [HttpGet]
+        public async Task<IActionResult> ValidateTokenCallBack(string validationToken)
+        {
+            if (string.IsNullOrEmpty(validationToken))
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            var result = await _accountService.ValidateAndActivateAccountAsync(validationToken);
+            if (!result)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            TempData["SuccessMessage"] = "Hesabınız başarıyla onaylandı.";
+            return RedirectToAction("Login", "Authentication");
+        }
+        #endregion
+
+        #region delete
+
+        [HttpGet]
+        public IActionResult DeleteConfirmation()
+        {
+            return View();
+        }
+
         [HttpPost]
         public async Task<IActionResult> Delete()
         {

@@ -25,9 +25,11 @@ namespace MyProject.Service
             _tokenGenerator = tokenGenerator;
             _distributedCache = distributedCache;
         }
+
         #region CreateAsync
         public async Task<bool> CreateAsync(AccountModel accountModel)
         {
+            // Girilen Password u hashliyoruz.
             byte[] passwordHash, passwordSalt;
             HashingHelper.CreatePasswordHash(accountModel.Password, out passwordHash, out passwordSalt);
 
@@ -45,7 +47,8 @@ namespace MyProject.Service
 
             await _applicationDbContext.Accounts.AddAsync(account);
             var result = await _applicationDbContext.SaveChangesAsync();
-
+            
+            // Eğer kayıt başarılı ise RabbitMq ile onay maili gönderiyoruz.
             if (result > 0)
             {        
                 await _emailService.SendValidationEmailAsync(accountModel);
@@ -55,84 +58,73 @@ namespace MyProject.Service
             return false;
         }
         #endregion
-        #region ValidateToken
-        public async Task<bool> ValidateToken(string email, string token)
-        {
-            var tokenEntity = await _applicationDbContext.RegisterTokens
-                                    .Where(p => p.Email == email && p.Token == token)
-                                    .FirstOrDefaultAsync();
 
-            if (tokenEntity == null)
-            {
-                return false;
-            }
-
-            if (tokenEntity.Expires < DateTime.UtcNow)
-            {
-                return false;
-            }
-            return true;
-        }
-        #endregion
         #region loginAsync
         public async Task<AccountModel> LoginAsync(LoginModel loginModel)
         {
+            // Cache'de bu e-posta adresi ile bir hesap var mı kontrol et
             var cachedAccount = await _distributedCache.GetStringAsync($"account:{loginModel.Email}");
             Account account = null;
 
             if (cachedAccount == null)
             {
+                // Veritabanında hesabın olup olmadığını kontrol et
                 account = await _applicationDbContext.Accounts
-                                .Where(a => a.Email == loginModel.Email)
-                                .FirstOrDefaultAsync();
+                            .Where(a => a.Email == loginModel.Email)
+                            .FirstOrDefaultAsync();
 
-                if (account != null && HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
+                // Eğer hesap bulunamazsa ya da şifre doğru değilse
+                if (account == null || !HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
                 {
-                    if (!account.IsActive)
-                    {
-                        throw new Exception("Hesap etkin değil. Giriş yapmak için hesabınızın etkin olması gerekmektedir.");
-                    }
-
-                    var accountModel = new AccountModel
-                    {
-                        FirstName = account.FirstName,
-                        LastName = account.LastName,
-                        Email = account.Email,
-                        Phone = account.Phone,
-                        CityId = account.CityId,
-                        IsActive = account.IsActive
-                    };
-
-                    var serializedData = JsonConvert.SerializeObject(accountModel);
-                    var cacheEntryOptions = new DistributedCacheEntryOptions
-                    {
-                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
-                    };
-                    await _distributedCache.SetStringAsync($"account:{loginModel.Email}", serializedData, cacheEntryOptions);
+                    return null;  // Başarısız giriş
                 }
-                else
+
+                // Hesap aktif değilse hata fırlat
+                if (!account.IsActive)
                 {
-                    return null;
+                    throw new Exception("Hesap etkin değil. Giriş yapmak için hesabınızın etkin olması gerekmektedir.");
                 }
+
+                // Kullanıcı bilgilerini cache'e ekle
+                var serializedData = JsonConvert.SerializeObject(account);
+                var cacheEntryOptions = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+                };
+                await _distributedCache.SetStringAsync($"account:{loginModel.Email}", serializedData, cacheEntryOptions);
             }
             else
             {
                 account = JsonConvert.DeserializeObject<Account>(cachedAccount);
+
+                // Şifre kontrolü yap, eğer yanlışsa null döndür
+                if (!HashingHelper.VerifyPasswordHash(loginModel.Password, account.PasswordHash, account.PasswordSalt))
+                {
+                    return null;  // Başarısız giriş
+                }
+
+                // Hesap aktif değilse hata fırlat
                 if (!account.IsActive)
                 {
                     throw new Exception("Hesap etkin değil. Giriş yapmak için hesabınızın etkin olması gerekmektedir.");
                 }
             }
+
+            // Başarılı giriş için modeli oluştur
             return new AccountModel
             {
                 FirstName = account.FirstName,
                 LastName = account.LastName,
                 Email = account.Email,
                 Phone = account.Phone,
-                CityId = account.CityId
+                CityId = account.CityId,
+                IsActive = account.IsActive
             };
         }
+
+
         #endregion
+
         #region UpdateAccountAsync
         public async Task<bool> UpdateAccountAsync(AccountUpdateModel accountUpdateModel, string accountEmail)
         {
@@ -154,26 +146,17 @@ namespace MyProject.Service
             _applicationDbContext.Accounts.Update(account);
             await _applicationDbContext.SaveChangesAsync();
 
-            var cacheKey = $"account:{accountEmail}";
+            var serializedData = JsonConvert.SerializeObject(account);
             var cacheEntryOptions = new DistributedCacheEntryOptions
             {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
             };
-            var accountData = new AccountModel
-            {
-                FirstName = account.FirstName,
-                LastName = account.LastName,
-                Email = account.Email,
-                Phone = account.Phone,
-                IsActive = account.IsActive,
-                CityId = account.CityId
-            };
-            var serializedData = JsonConvert.SerializeObject(accountData);
-            await _distributedCache.SetStringAsync(cacheKey, serializedData, cacheEntryOptions);
+            await _distributedCache.SetStringAsync($"account:{accountEmail}", serializedData, cacheEntryOptions);
 
             return true;
         }
         #endregion
+
         #region UpdatePasswordAsync
         public async Task<bool> UpdatePasswordAsync(UpdatePasswordModel updatePasswordModel, string accountEmail)
         {
@@ -201,25 +184,16 @@ namespace MyProject.Service
             _applicationDbContext.Accounts.Update(account);
             
             await _applicationDbContext.SaveChangesAsync();
-            var cacheKey = $"account:{accountEmail}";
-            var cachedAccount = await _distributedCache.GetStringAsync(cacheKey);
-
-            if (!string.IsNullOrEmpty(cachedAccount))
+            var serializedData = JsonConvert.SerializeObject(account);
+            var cacheEntryOptions = new DistributedCacheEntryOptions
             {
-                var cachedAccountModel = JsonConvert.DeserializeObject<AccountModel>(cachedAccount);
-                
-                cachedAccountModel.IsActive = account.IsActive;
-                var updatedSerializedData = JsonConvert.SerializeObject(cachedAccountModel);
-
-                var cacheEntryOptions = new DistributedCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
-                };
-                await _distributedCache.SetStringAsync(cacheKey, updatedSerializedData, cacheEntryOptions);
-            }
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+            };
+            await _distributedCache.SetStringAsync($"account:{accountEmail}", serializedData, cacheEntryOptions);
             return true;
         }
         #endregion
+
         #region DeleteAccountAsync
         public async Task<bool> DeleteAccountAsync(string accountEmail)
         {
@@ -238,6 +212,7 @@ namespace MyProject.Service
             return true;
         }
         #endregion
+
         #region GetAccountForUpdateAsync       
         public async Task<AccountUpdateModel> GetAccountForUpdateAsync(string accountEmail)
         {
@@ -260,6 +235,7 @@ namespace MyProject.Service
             return null;
         }
         #endregion
+
         #region ValidateAndActivateAccountAsync
         public async Task<bool> ValidateAndActivateAccountAsync(string validationToken)
         {
@@ -287,6 +263,7 @@ namespace MyProject.Service
             return true;
         }
         #endregion
+
         #region GetAccountInfoAsync
         public async Task<AccountInfoModel> GetAccountInfoAsync(string accountEmail)
         {
