@@ -3,38 +3,100 @@
     ViewData["Title"] = "Account Update";
     var cities = (List<City>)ViewBag.Cities;
 }
+<h2>Password Update</h2>
 
 <form method="post">
-    <div class="border pt-3 mt-4">
-        <div class="row pb-2">
-            <h2 class="text-primary">Account Update</h2>
+    <section style="background-color: #eee;">
+        <div class="container py-5">
+            <div class="row">
+                <div class="col">
+                    <nav aria-label="breadcrumb" class="bg-light rounded-3 p-3 mb-4">
+                        <ol class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="#">Home</a></li>
+                            <li class="breadcrumb-item"><a href="#">Account</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Account Update</li>
+                        </ol>
+                    </nav>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-lg-4">
+                    <div class="card mb-4">
+                        <div class="card-body text-center">
+                            <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava3.webp" alt="avatar" class="rounded-circle img-fluid" style="width: 150px;">
+                            <h5 class="my-3">@Model.FirstName @Model.LastName</h5>
+                            <div class="d-flex justify-content-center mb-2">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mb-4 mb-lg-0">
+                        <div class="card-body p-0">
+                            <ul class="list-group list-group-flush rounded-3">
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-8">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <p class="mb-0">First Name</p>
+                                </div>
+                                <div class="col-sm-9">
+                                    <input asp-for="FirstName" class="form-control" pattern="[A-Za-z]+" title="Please enter letters only" required />
+                                    <span asp-validation-for="FirstName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <p class="mb-0">Last Name</p>
+                                </div>
+                                <div class="col-sm-9">
+                                    <input asp-for="LastName" class="form-control" pattern="[A-Za-z]+" title="Please enter letters only" required />
+                                    <span asp-validation-for="LastName" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <p class="mb-0">City</p>
+                                </div>
+                                <div class="col-sm-9">
+                                    <select asp-for="CityId" class="form-control">
+                                        @foreach(var item in cities){
+                                            <option value="@item.CityId">@item.CityName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-sm-3">
+                                    <p class="mb-0">Phone</p>
+                                </div>
+                                <div class="col-sm-9">
+                                    <input asp-for="Phone" class="form-control" pattern="[0-9]+" title="Please enter numbers only" required />
+                                    <span asp-validation-for="Phone" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-end align-items-center">
+                                <button type="submit" class="btn btn-primary" style="width:100px">Update</button>
+                                <div class="mx-3">
+                                    <hr>
+                                </div>
+                                <a asp-controller="Authentication" asp-action="AccountInfo" class="btn btn-secondary" style="width:100px">
+                                    Cancel
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div asp-validation-summary="All"></div>
-        <div class="mb-3">
-            <label asp-for="FirstName"></label>
-            <input asp-for="FirstName" class="form-control" pattern="[A-Za-z]+" title="Please enter letters only" required />
-            <span asp-validation-for="FirstName" class="text-danger"></span>
-        </div>
-        <div class="mb-3">
-            <label asp-for="LastName"></label>
-            <input asp-for="LastName" class="form-control" pattern="[A-Za-z]+" title="Please enter letters only" required />
-            <span asp-validation-for="LastName" class="text-danger"></span>
-        </div>
-        <select asp-for="CityId" class="form-control">
-            @foreach(var item in cities){
-                <option value="@item.CityId">@item.CityName</option>
-            }
-        </select>
-        <div class="mb-3">
-            <label asp-for="Phone"></label>
-            <input asp-for="Phone" class="form-control" pattern="[0-9]+" title="Please enter numbers only" required />
-            <span asp-validation-for="Phone" class="text-danger"></span>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:150px">Update</button>
-        <a asp-controller="Authentication" asp-action="AccountInfo" class="btn btn-secondary" style="width:150px">
-            Cancel
-        </a>
-    </div>
+    </section>
 </form>
 
 @section Scripts

@@ -2,10 +2,6 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using MyProject.Data;
 using MyProject.Models;
-using MyProject.Service;
-using System;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace MyProject.Service
 {
