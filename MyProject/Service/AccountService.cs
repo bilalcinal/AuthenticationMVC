@@ -27,9 +27,29 @@ namespace MyProject.Service
         }
 
         #region CreateAsync
-        public async Task<bool> CreateAsync(AccountModel accountModel)
+        public async Task<(bool, string)> CreateAsync(AccountModel accountModel)
         {
-            // Girilen Password u hashliyoruz.
+            var existingAccount = await _applicationDbContext.Accounts
+                                    .Where(a => a.Email == accountModel.Email || a.Phone == accountModel.Phone)
+                                    .FirstOrDefaultAsync();
+
+            if (existingAccount != null)
+            {
+                if (existingAccount.Email == accountModel.Email)
+                {
+                    return (false, "Bu e-posta adresi zaten kullanılıyor.");
+                }
+                else if (existingAccount.Phone == accountModel.Phone)
+                {
+                    return (false, "Bu telefon numarası zaten kullanılıyor.");
+                }
+            }
+
+            if (accountModel.Password != accountModel.PasswordAgain)
+            {
+                return (false, "Parola eşleşmiyor. Lütfen tekrar deneyin.");
+            }
+
             byte[] passwordHash, passwordSalt;
             HashingHelper.CreatePasswordHash(accountModel.Password, out passwordHash, out passwordSalt);
 
@@ -47,16 +67,16 @@ namespace MyProject.Service
 
             await _applicationDbContext.Accounts.AddAsync(account);
             var result = await _applicationDbContext.SaveChangesAsync();
-            
-            // Eğer kayıt başarılı ise RabbitMq ile onay maili gönderiyoruz.
+
             if (result > 0)
-            {        
+            {
                 await _emailService.SendValidationEmailAsync(accountModel);
-                return true;
+                return (true, "Account successfully created.");
             }
 
-            return false;
+            return (false, "Account creation failed.");
         }
+
         #endregion
 
         #region loginAsync
@@ -126,15 +146,24 @@ namespace MyProject.Service
         #endregion
 
         #region UpdateAccountAsync
-        public async Task<bool> UpdateAccountAsync(AccountUpdateModel accountUpdateModel, string accountEmail)
+        public async Task<(bool, string)> UpdateAccountAsync(AccountUpdateModel accountUpdateModel, string accountEmail)
         {
             var account = await _applicationDbContext.Accounts
-                            .Where(a => a.Email == accountEmail)
-                            .FirstOrDefaultAsync();
+                                .Where(a => a.Email == accountEmail)
+                                .FirstOrDefaultAsync();
 
             if (account == null)
             {
-                return false;
+                return (false, "Account not found.");
+            }
+
+            var existingAccountWithPhone = await _applicationDbContext.Accounts
+                                .Where(a => a.Phone == accountUpdateModel.Phone && a.Email != accountEmail)
+                                .FirstOrDefaultAsync();
+                                
+            if(existingAccountWithPhone != null)
+            {
+                return (false, "Phone number already exists.");
             }
 
             account.FirstName = accountUpdateModel.FirstName;
@@ -153,8 +182,10 @@ namespace MyProject.Service
             };
             await _distributedCache.SetStringAsync($"account:{accountEmail}", serializedData, cacheEntryOptions);
 
-            return true;
+            return (true, "Account updated successfully.");
         }
+
+
         #endregion
 
         #region UpdatePasswordAsync
@@ -295,6 +326,15 @@ namespace MyProject.Service
             };
 
             return accountInfoModel;
+        }
+        #endregion
+        
+        #region GetSortedCitiesAsync
+        public async Task<List<City>> GetSortedCitiesAsync()
+        {
+            return await _applicationDbContext.Cities
+                        .OrderBy(p => p.CityName)
+                        .ToListAsync();
         }
         #endregion
     }

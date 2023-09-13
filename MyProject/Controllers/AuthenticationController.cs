@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using MyProject.Data;
 using MyProject.Interface;
@@ -14,10 +13,8 @@ namespace MyProject.Controllers
     public class AuthenticationController : Controller
     {
         private readonly IAccountService _accountService;
-        private readonly ApplicationDbContext _applicationDbContext;
         public AuthenticationController(ApplicationDbContext applicationDbContext, IDistributedCache distributedCache, EmailService emailService, IAccountService accountService)
         {
-            _applicationDbContext = applicationDbContext;
             _accountService = accountService;
         }
 
@@ -33,56 +30,36 @@ namespace MyProject.Controllers
         [HttpGet]
         public async Task<IActionResult> Register()
         {
-            ViewBag.Cities = await _applicationDbContext.Cities
-                                    .OrderBy(p => p.CityName)
-                                    .ToListAsync();
+            ViewBag.Cities = await _accountService.GetSortedCitiesAsync();
             return View();
         }
 
         [HttpPost]
         public async Task<IActionResult> Register(AccountModel accountModel)
         {
-            // Girilen değerlerin veritabanında var olup olmadığını kontrol ediyoruz.
-            var existingAccount = await _applicationDbContext.Accounts
-                                        .Where(a => a.Email == accountModel.Email || a.Phone == accountModel.Phone)
-                                        .FirstOrDefaultAsync();
-
-            if (existingAccount != null)
+            try
             {
-                if (existingAccount.Email == accountModel.Email)
-                {
-                    ModelState.AddModelError("Email", "Bu e-posta adresi zaten kullanılıyor.");
-                }
-                else if (existingAccount.Phone == accountModel.Phone)
-                {
-                    ModelState.AddModelError("Phone", "Bu telefon numarası zaten kullanılıyor.");
-                }
+                if (ModelState.IsValid)
+                    {
+                        var (result, message) = await _accountService.CreateAsync(accountModel);
+
+                        if (result)
+                        {
+                            TempData["SuccessMessage"] = "Kayıt işlemi başarıyla tamamlandı.";
+                            return RedirectToAction("Login", "Authentication");
+                        }
+                        else
+                        {
+                            ModelState.AddModelError("", message);
+                        }
+                    }
             }
-            // Password PasswordAgain eşleşip eşleşmediğine bakıyoruz.
-            if (accountModel.Password != accountModel.PasswordAgain)
+            catch (InvalidOperationException ex)
             {
-                ModelState.AddModelError("Password", "Parola eşleşmiyor. Lütfen tekrar deneyin.");
-            }
-
-            // Eğer yukarıda ki işlemlerde bir sıkıntı yoksa CreateAsync Service i çalışıyor
-            if (ModelState.IsValid)
-            {
-                bool result = await _accountService.CreateAsync(accountModel);
-
-                if (result)
-                {
-                    TempData["SuccessMessage"] = "Kayıt işlemi başarıyla tamamlandı.";
-                    return RedirectToAction("Login", "Authentication");
-                }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "Bir hata oluştu. Lütfen tekrar deneyin.");
-                }
+                ModelState.AddModelError(string.Empty, ex.Message);
             }
 
-            ViewBag.Cities = await _applicationDbContext.Cities
-                                    .OrderBy(p => p.CityName)
-                                    .ToListAsync();
+            ViewBag.Cities = await _accountService.GetSortedCitiesAsync();
             return View(accountModel);
         }
         #endregion
@@ -149,15 +126,14 @@ namespace MyProject.Controllers
         [HttpGet]
         public async Task<IActionResult> Update()
         {
- 
+
             var accountEmail = User.Identity.Name;
 
             var accountUpdateModel = await _accountService.GetAccountForUpdateAsync(accountEmail);
 
             if (accountUpdateModel != null)
             {
-                var cities = await _applicationDbContext.Cities.ToListAsync();
-                ViewBag.Cities = cities;
+                ViewBag.Cities = await _accountService.GetSortedCitiesAsync();
                 return View(accountUpdateModel);
             }
 
@@ -171,7 +147,7 @@ namespace MyProject.Controllers
             {
                 var accountEmail = User.Identity.Name;
 
-                var updateSuccessful = await _accountService.UpdateAccountAsync(accountUpdateModel, accountEmail);
+                var (updateSuccessful, message) = await _accountService.UpdateAccountAsync(accountUpdateModel, accountEmail);
 
                 if (updateSuccessful)
                 {
@@ -180,14 +156,14 @@ namespace MyProject.Controllers
                 }
                 else
                 {
-                    ModelState.AddModelError("", "Hesap güncellenemedi.");
+                    ModelState.AddModelError("", message);
                 }
             }
 
-            var cities = await _applicationDbContext.Cities.ToListAsync();
-            ViewBag.Cities = cities;
+            ViewBag.Cities = await _accountService.GetSortedCitiesAsync();
             return View(accountUpdateModel);
         }
+
         #endregion
 
         #region UpdatePassword

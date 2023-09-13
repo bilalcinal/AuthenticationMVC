@@ -3,6 +3,18 @@
     ViewData["Title"] = "Account Update";
     var cities = (List<City>)ViewBag.Cities;
 }
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger">
+        @foreach (var value in ViewData.ModelState.Values)
+        {
+            @foreach (var error in value.Errors)
+            {
+                <div>@error.ErrorMessage</div>
+            }
+        }
+    </div>
+}
 <h2>Password Update</h2>
 
 <form method="post">
