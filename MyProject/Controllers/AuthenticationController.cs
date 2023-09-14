@@ -2,11 +2,8 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Distributed;
-using MyProject.Data;
 using MyProject.Interface;
 using MyProject.Models;
-using MyProject.Service;
 
 namespace MyProject.Controllers
 {

@@ -1,10 +1,7 @@
-using System;
-using System.Threading.Tasks;
 using MailKit.Net.Smtp;
 using MimeKit;
 using MyProject.Data;
 using MyProject.Models;
-using MyProject.Service;
 using MyProject.Utilities.Token;
 using Newtonsoft.Json;
 

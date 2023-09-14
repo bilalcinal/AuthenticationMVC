@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using MyProject.Data;
 using MyProject.Models;
 

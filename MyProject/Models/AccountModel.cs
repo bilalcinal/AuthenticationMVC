@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using MyProject.Data;
 
 namespace MyProject.Models
 {

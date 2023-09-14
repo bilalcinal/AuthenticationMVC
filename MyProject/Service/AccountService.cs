@@ -4,7 +4,6 @@ using MyProject.Data;
 using MyProject.Interface;
 using MyProject.Models;
 using MyProject.Utilities.Security.Hashing;
-using MyProject.Utilities.Token;
 using Newtonsoft.Json;
 
 namespace MyProject.Service

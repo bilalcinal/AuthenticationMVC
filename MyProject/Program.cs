@@ -31,6 +31,7 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddTransient<RabbitMqService>();
 builder.Services.AddSingleton<TokenGenerator>();
+
 var serviceProvider = builder.Services.BuildServiceProvider();
 RecurringJobs.ConfigureRecurringJobs(serviceProvider);
 
