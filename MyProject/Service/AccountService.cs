@@ -243,6 +243,8 @@ namespace MyProject.Service
             _applicationDbContext.Accounts.Remove(account);
             _applicationDbContext.RegisterTokens.Remove(accountToken);
             await _applicationDbContext.SaveChangesAsync();
+            
+            await _distributedCache.RemoveAsync($"account:{accountEmail}");
 
             return true;
         }

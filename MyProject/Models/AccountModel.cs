@@ -14,7 +14,7 @@ namespace MyProject.Models
         public string LastName { get; set; }
         
         [Required(ErrorMessage = "Phone field is required.")]
-        [RegularExpression(@"^5[0-9]{9,15}$", ErrorMessage = "Please enter a valid phone number. Your phone number must start with 5")]
+        [RegularExpression(@"^5[0-9]{9,13}$", ErrorMessage = "Please enter a valid phone number. Your phone number must start with 5")]
         public string Phone { get; set; }
 
         [Required(ErrorMessage = "Email field is required.")]

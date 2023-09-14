@@ -15,6 +15,5 @@ namespace MyProject.Interface
         Task<bool> ValidateAndActivateAccountAsync(string validationToken);
         Task<AccountInfoModel> GetAccountInfoAsync(string accountEmail);
         Task<List<City>> GetSortedCitiesAsync();
-
     }
 }
