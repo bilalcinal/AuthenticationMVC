@@ -29,8 +29,8 @@ namespace MyProject.Service
                     var emailSendModel = new EmailModel
                     {
                         ToEmail = email,
-                        Subject = "Hatırlatma",
-                        Body = "Merhaba, unutmayın!"
+                        Subject = "Reminding",
+                        Body = "Hello, come back!"
                     };
 
                     await emailService.SendEmailAsync(emailSendModel);

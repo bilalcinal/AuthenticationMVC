@@ -13,7 +13,7 @@ namespace MyProject.Controllers
     public class AuthenticationController : Controller
     {
         private readonly IAccountService _accountService;
-        public AuthenticationController(ApplicationDbContext applicationDbContext, IDistributedCache distributedCache, EmailService emailService, IAccountService accountService)
+        public AuthenticationController(IAccountService accountService)
         {
             _accountService = accountService;
         }
@@ -45,7 +45,7 @@ namespace MyProject.Controllers
 
                         if (result)
                         {
-                            TempData["SuccessMessage"] = "Kayıt işlemi başarıyla tamamlandı.";
+                            TempData["SuccessMessage"] = "Registration completed successfully.";
                             return RedirectToAction("Login", "Authentication");
                         }
                         else
@@ -88,7 +88,7 @@ namespace MyProject.Controllers
                 // Eğer hesap modeli null ise şifre veya e-posta yanlış
                 if (accountModel == null)
                 {
-                    ModelState.AddModelError("", "Geçersiz e-posta adresi veya şifre.");
+                    ModelState.AddModelError("", "Invalid email address or password.");
                     return View(loginModel);
                 }
 
@@ -137,7 +137,7 @@ namespace MyProject.Controllers
                 return View(accountUpdateModel);
             }
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("AccountInfo", "Authentication");
         }
 
         [HttpPost]
@@ -151,7 +151,7 @@ namespace MyProject.Controllers
 
                 if (updateSuccessful)
                 {
-                    TempData["SuccessMessage"] = "Hesap bilgileri başarıyla güncellendi.";
+                    TempData["SuccessMessage"] = "Account information has been updated successfully.";
                     return RedirectToAction("AccountInfo", "Authentication");
                 }
                 else
@@ -180,20 +180,38 @@ namespace MyProject.Controllers
             {
                 var accountEmail = User.Identity.Name;
 
-                var updateSuccessful = await _accountService.UpdatePasswordAsync(updatePasswordModel, accountEmail);
+                var (updateSuccessful, message) = await _accountService.UpdatePasswordAsync(updatePasswordModel, accountEmail);
 
                 if (updateSuccessful)
                 {
-                    TempData["SuccessMessage"] = "Şifre başarıyla güncellendi.";
+                    TempData["SuccessMessage"] = message;
                     return RedirectToAction("AccountInfo", "Authentication");
                 }
                 else
                 {
-                    ModelState.AddModelError("OldPassword", "Eski şifre yanlış.");
+                    if (message == "The old password is incorrect.")
+                    {
+                        ModelState.AddModelError("OldPassword", message);
+                    }
+                    else if(message == "The new password cannot be the same as the old password.")
+                    {
+                        ModelState.AddModelError("OldPassword", message);
+                        ModelState.AddModelError("NewPassword", message);
+                    }
+                    else if (message == "The new password and password verification do not match.")
+                    {
+                        ModelState.AddModelError("NewPassword", message);
+                        ModelState.AddModelError("ConfirmNewPassword", message);
+                    }
+                    else if (message == "Account not found.")
+                    {
+                        ModelState.AddModelError(string.Empty, message);
+                    }
                 }
             }
             return View(updatePasswordModel);
         }
+
         #endregion
 
         #region AccountInfo
@@ -227,7 +245,7 @@ namespace MyProject.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            TempData["SuccessMessage"] = "Hesabınız başarıyla onaylandı.";
+            TempData["SuccessMessage"] = "Your account has been successfully confirmed.";
             return RedirectToAction("Login", "Authentication");
         }
         #endregion
@@ -250,11 +268,11 @@ namespace MyProject.Controllers
             if (deleteSuccessful)
             {
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                TempData["SuccessMessage"] = "Hesap başarıyla silindi.";
-                return RedirectToAction("Index", "Home");
+                TempData["SuccessMessage"] = "Account deleted successfully.";
+                return RedirectToAction("Login", "Authentication");
             }
 
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("Login", "Authentication");
         }
         #endregion
     }

@@ -8,16 +8,16 @@ namespace MyProject.Models
 {
     public class AccountUpdateModel
     {
-        [Required(ErrorMessage = "Ad alanı zorunludur.")]
-        [RegularExpression(@"^[a-zA-ZğüşıöçĞÜŞİÖÇ]+$", ErrorMessage = "Sadece harf karakterleri kullanılabilir.")]
+        [Required(ErrorMessage = "Name field is required.")]
+        [RegularExpression(@"^[a-zA-ZğüşıöçĞÜŞİÖÇ]{1,20}$", ErrorMessage = "Only alphabet characters can be used.")]
         public string FirstName { get; set; }
 
-        [Required(ErrorMessage = "Soyad alanı zorunludur.")]
-        [RegularExpression(@"^[a-zA-ZğüşıöçĞÜŞİÖÇ]+$", ErrorMessage = "Sadece harf karakterleri kullanılabilir.")]
+        [Required(ErrorMessage = "The Surname field is required.")]
+        [RegularExpression(@"^[a-zA-ZğüşıöçĞÜŞİÖÇ]{1,20}$", ErrorMessage = "Only alphabet characters can be used.")]
         public string LastName { get; set; }
 
-         [Required(ErrorMessage = "Telefon alanı zorunludur.")]
-        [RegularExpression(@"^5[0-9]{9,15}$", ErrorMessage = "Geçerli bir telefon numarası giriniz. Telefon numaranız 5 ile başlamalıdır")]
+        [Required(ErrorMessage = "Phone field is required.")]
+        [RegularExpression(@"^5[0-9]{9,13}$", ErrorMessage = "Geçerli bir telefon numarası giriniz. Telefon numaranız 5 ile başlamalıdır")]
         public string Phone { get; set; }
         public int CityId { get; set; }
         public DateTime? ModifiedDate { get; set; }

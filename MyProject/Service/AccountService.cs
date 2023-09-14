@@ -13,16 +13,12 @@ namespace MyProject.Service
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly EmailService _emailService;
-        private readonly RabbitMqService _rabbitMqService;
-        private readonly TokenGenerator _tokenGenerator;
         private readonly IDistributedCache _distributedCache; 
 
-        public AccountService(ApplicationDbContext applicationDbContext, EmailService emailService, RabbitMqService rabbitMqService, TokenGenerator tokenGenerator, IDistributedCache distributedCache)
+        public AccountService(ApplicationDbContext applicationDbContext, EmailService emailService,IDistributedCache distributedCache)
         {
             _applicationDbContext = applicationDbContext;
             _emailService = emailService;
-            _rabbitMqService = rabbitMqService;
-            _tokenGenerator = tokenGenerator;
             _distributedCache = distributedCache;
         }
 
@@ -35,19 +31,16 @@ namespace MyProject.Service
 
             if (existingAccount != null)
             {
-                if (existingAccount.Email == accountModel.Email)
+                if (existingAccount.Email == accountModel.Email || existingAccount.Phone == accountModel.Phone)
                 {
-                    return (false, "Bu e-posta adresi zaten kullanılıyor.");
+                    return (false, "This email address is already in use or This phone number is already in use. Or both ");
                 }
-                else if (existingAccount.Phone == accountModel.Phone)
-                {
-                    return (false, "Bu telefon numarası zaten kullanılıyor.");
-                }
+
             }
 
             if (accountModel.Password != accountModel.PasswordAgain)
             {
-                return (false, "Parola eşleşmiyor. Lütfen tekrar deneyin.");
+                return (false, "Password does not match. Please try again.");
             }
 
             byte[] passwordHash, passwordSalt;
@@ -71,10 +64,10 @@ namespace MyProject.Service
             if (result > 0)
             {
                 await _emailService.SendValidationEmailAsync(accountModel);
-                return (true, "Account successfully created.");
+                return (true, "The account has been created successfully.");
             }
 
-            return (false, "Account creation failed.");
+            return (false, "The account could not be created.");
         }
 
         #endregion
@@ -102,7 +95,7 @@ namespace MyProject.Service
                 // Hesap aktif değilse hata fırlat
                 if (!account.IsActive)
                 {
-                    throw new Exception("Hesap etkin değil. Giriş yapmak için hesabınızın etkin olması gerekmektedir.");
+                    throw new Exception("Account is inactive. Your account must be active to log in.");
                 }
 
                 // Kullanıcı bilgilerini cache'e ekle
@@ -126,7 +119,7 @@ namespace MyProject.Service
                 // Hesap aktif değilse hata fırlat
                 if (!account.IsActive)
                 {
-                    throw new Exception("Hesap etkin değil. Giriş yapmak için hesabınızın etkin olması gerekmektedir.");
+                    throw new Exception("Account is inactive. Your account must be active to log in.");
                 }
             }
 
@@ -163,7 +156,7 @@ namespace MyProject.Service
                                 
             if(existingAccountWithPhone != null)
             {
-                return (false, "Phone number already exists.");
+                return (false, "Phone number is used.");
             }
 
             account.FirstName = accountUpdateModel.FirstName;
@@ -182,27 +175,34 @@ namespace MyProject.Service
             };
             await _distributedCache.SetStringAsync($"account:{accountEmail}", serializedData, cacheEntryOptions);
 
-            return (true, "Account updated successfully.");
+            return (true, "Account updated");
         }
 
 
         #endregion
 
         #region UpdatePasswordAsync
-        public async Task<bool> UpdatePasswordAsync(UpdatePasswordModel updatePasswordModel, string accountEmail)
+        public async Task<(bool,string)> UpdatePasswordAsync(UpdatePasswordModel updatePasswordModel, string accountEmail)
         {
             var account = await _applicationDbContext.Accounts
-                            .Where(a => a.Email == accountEmail)
-                            .FirstOrDefaultAsync();
+                        .Where(a => a.Email == accountEmail)
+                        .FirstOrDefaultAsync();
 
             if (account == null)
             {
-                return false;
+                return (false, "Account not found.");
             }
-
+            if (HashingHelper.VerifyPasswordHash(updatePasswordModel.NewPassword, account.PasswordHash, account.PasswordSalt))
+            {
+                return (false, "The new password cannot be the same as the old password.");
+            }
+            if (updatePasswordModel.NewPassword != updatePasswordModel.ConfirmNewPassword)
+            {
+                return (false, "The new password and password verification do not match.");
+            }
             if (!HashingHelper.VerifyPasswordHash(updatePasswordModel.OldPassword, account.PasswordHash, account.PasswordSalt))
             {
-                return false;
+                return (false, "The old password is incorrect.");
             }
 
             byte[] newPasswordHash, newPasswordSalt;
@@ -213,7 +213,7 @@ namespace MyProject.Service
             account.ModifiedDate = DateTime.UtcNow;
 
             _applicationDbContext.Accounts.Update(account);
-            
+
             await _applicationDbContext.SaveChangesAsync();
             var serializedData = JsonConvert.SerializeObject(account);
             var cacheEntryOptions = new DistributedCacheEntryOptions
@@ -221,7 +221,7 @@ namespace MyProject.Service
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
             };
             await _distributedCache.SetStringAsync($"account:{accountEmail}", serializedData, cacheEntryOptions);
-            return true;
+            return (true, "Password has been updated successfully.");        
         }
         #endregion
 
@@ -231,13 +231,17 @@ namespace MyProject.Service
             var account = await _applicationDbContext.Accounts
                             .Where(a => a.Email == accountEmail)
                             .FirstOrDefaultAsync();
-
-            if (account == null)
+            var accountToken = await _applicationDbContext.RegisterTokens
+                            .Where(p => p.Email == accountEmail)
+                            .FirstOrDefaultAsync();
+            
+            if (account == null || accountToken == null)
             {
                 return false;
             }
 
             _applicationDbContext.Accounts.Remove(account);
+            _applicationDbContext.RegisterTokens.Remove(accountToken);
             await _applicationDbContext.SaveChangesAsync();
 
             return true;
@@ -312,7 +316,7 @@ namespace MyProject.Service
             var cityName = cities.FirstOrDefault(c => c.CityId == account.CityId)?.CityName;
             if (cityName == null)
             {
-                cityName = "Unknown City";
+                cityName = "unknown city";
             }
 
             var accountInfoModel = new AccountInfoModel

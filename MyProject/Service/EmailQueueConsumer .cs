@@ -15,12 +15,6 @@ namespace MyProject.Service
         private readonly IConnection _connection;
         private readonly IModel _channel;
         private readonly string _queueName;
-        private readonly RabbitMqService _rabbitMqService;
-
-        public EmailQueueConsumer(RabbitMqService rabbitMqService)
-        {
-            _rabbitMqService = rabbitMqService;
-        }
 
         public EmailQueueConsumer()
         {
@@ -41,7 +35,7 @@ namespace MyProject.Service
                 var body = e.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
 
-                var emailMessage = Newtonsoft.Json.JsonConvert.DeserializeObject<EmailModel>(message);
+                var emailMessage = JsonConvert.DeserializeObject<EmailModel>(message);
 
                 ProcessEmail(emailMessage);
 

@@ -9,7 +9,7 @@ namespace MyProject.Interface
         Task<(bool,string)> CreateAsync(AccountModel accountModel);
         Task<AccountModel> LoginAsync(LoginModel loginModel);
         Task<(bool, string)> UpdateAccountAsync(AccountUpdateModel accountUpdateModel, string accountEmail);
-        Task<bool> UpdatePasswordAsync(UpdatePasswordModel updatePasswordModel, string accountEmail);
+        Task<(bool,string)> UpdatePasswordAsync(UpdatePasswordModel updatePasswordModel, string accountEmail);       
         Task<bool> DeleteAccountAsync(string accountEmail);
         Task<AccountUpdateModel> GetAccountForUpdateAsync(string accountEmail);
         Task<bool> ValidateAndActivateAccountAsync(string validationToken);

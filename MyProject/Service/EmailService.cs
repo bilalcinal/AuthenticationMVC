@@ -14,12 +14,10 @@ namespace MyProject.Service
     {
         private readonly ApplicationDbContext _applicationDbContext;
         private readonly TokenGenerator _tokenGenerator;
-        private readonly IConfiguration _configuration;
         private readonly RabbitMqService _rabbitMqService;
 
-        public EmailService(IConfiguration configuration, RabbitMqService rabbitMqService, ApplicationDbContext applicationDbContext, TokenGenerator tokenGenerator)
+        public EmailService(RabbitMqService rabbitMqService, ApplicationDbContext applicationDbContext, TokenGenerator tokenGenerator)
         {
-            _configuration = configuration;
             _rabbitMqService = rabbitMqService;
             _applicationDbContext = applicationDbContext;
             _tokenGenerator = tokenGenerator;
@@ -69,7 +67,7 @@ namespace MyProject.Service
             var emailModel = new EmailModel
             {
                 ToEmail = accountModel.Email,
-                Subject = "Hoş Geldiniz!",
+                Subject = "Welcome!",
                 Body = $@"<!DOCTYPE html>
                             <html lang=""en"">
                             <head>
